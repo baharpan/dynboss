@@ -1,0 +1,35 @@
+In file included from /home/alan/code/dynamic-nicola/include/dynamic.hpp:22:0,
+                 from debruijn_graph.hpp:15,
+                 from cosmo-build.cpp:12:
+/home/alan/code/dynamic-nicola/include/internal/packed_vector.hpp: In member function ‘dyn::packed_vector* dyn::packed_vector::split()’:
+/home/alan/code/dynamic-nicola/include/internal/packed_vector.hpp:540:12: warning: unused variable ‘prev_size’ [-Wunused-variable]
+   uint64_t prev_size = size_;
+            ^
+In file included from debruijn_graph.hpp:15:0,
+                 from cosmo-build.cpp:12:
+/home/alan/code/dynamic-nicola/include/dynamic.hpp: In member function ‘void dyn::bwt<dynamic_string_type, rle_string_type>::build_from_string(std::string&, dyn::bwt<dynamic_string_type, rle_string_type>::char_type, bool) [with dynamic_string_type = dyn::rle_string<dyn::gap_bitvector<dyn::spsi<dyn::packed_vector, 256u, 16u> >, dyn::wt_string<dyn::succinct_bitvector<dyn::spsi<dyn::packed_vector, 8192u, 16u> > > >; rle_string_type = dyn::rle_string<dyn::gap_bitvector<dyn::spsi<dyn::packed_vector, 256u, 16u> >, dyn::wt_string<dyn::succinct_bitvector<dyn::spsi<dyn::packed_vector, 8192u, 16u> > > >; std::string = std::basic_string<char>; dyn::bwt<dynamic_string_type, rle_string_type>::char_type = long unsigned int]’:
+/home/alan/code/dynamic-nicola/include/dynamic.hpp:151:13: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+   if(bwt[i] != c){
+             ^
+/home/alan/code/dynamic-nicola/include/dynamic.hpp:179:8: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+    if(i>last_step+(step-1)){
+        ^
+In file included from cosmo-build.cpp:12:0:
+debruijn_graph.hpp: In static member function ‘static debruijn_graph<t_sigma, t_bit_vector_type, t_bv_rank_type, t_bv_select_type, t_edge_vector_type, t_symbol_type, t_label_type> debruijn_graph<t_sigma, t_bit_vector_type, t_bv_rank_type, t_bv_select_type, t_edge_vector_type, t_symbol_type, t_label_type>::load_from_packed_edges(std::istream&, debruijn_graph<t_sigma, t_bit_vector_type, t_bv_rank_type, t_bv_select_type, t_edge_vector_type, t_symbol_type, t_label_type>::label_type, std::vector<long unsigned int>*)’:
+debruijn_graph.hpp:177:34: error: expected type-specifier before ‘wt’
+     t_edge_vector_type* wt = new wt(16, edges ); //16 is the alphabet size
+                                  ^
+In file included from /home/alan/code/dynamic-nicola/include/dynamic.hpp:15:0,
+                 from debruijn_graph.hpp:15,
+                 from cosmo-build.cpp:12:
+/home/alan/code/dynamic-nicola/include/internal/spsi.hpp: In instantiation of ‘dyn::spsi<leaf_type, B_LEAF, B>::node::node(const dyn::spsi<leaf_type, B_LEAF, B>::node&) [with leaf_type = dyn::packed_vector; unsigned int B_LEAF = 256u; unsigned int B = 16u]’:
+/home/alan/code/dynamic-nicola/include/internal/spsi.hpp:130:8:   required from ‘dyn::spsi<leaf_type, B_LEAF, B>::spsi(const dyn::spsi<leaf_type, B_LEAF, B>&) [with leaf_type = dyn::packed_vector; unsigned int B_LEAF = 256u; unsigned int B = 16u]’
+/home/alan/code/dynamic-nicola/include/internal/gap_bitvector.hpp:28:10:   required from here
+/home/alan/code/dynamic-nicola/include/internal/spsi.hpp:410:12: warning: unused variable ‘parent’ [-Wunused-variable]
+      node* parent = NULL;  //NULL for root
+            ^
+/home/alan/code/dynamic-nicola/include/internal/spsi.hpp: In instantiation of ‘dyn::spsi<leaf_type, B_LEAF, B>::node::node(const dyn::spsi<leaf_type, B_LEAF, B>::node&) [with leaf_type = dyn::packed_vector; unsigned int B_LEAF = 8192u; unsigned int B = 16u]’:
+/home/alan/code/dynamic-nicola/include/internal/spsi.hpp:130:8:   required from ‘dyn::spsi<leaf_type, B_LEAF, B>::spsi(const dyn::spsi<leaf_type, B_LEAF, B>&) [with leaf_type = dyn::packed_vector; unsigned int B_LEAF = 8192u; unsigned int B = 16u]’
+/home/alan/code/dynamic-nicola/include/internal/succinct_bitvector.hpp:57:10:   required from here
+/home/alan/code/dynamic-nicola/include/internal/spsi.hpp:410:12: warning: unused variable ‘parent’ [-Wunused-variable]
+make: *** [cosmo-build] Error 1
