@@ -6,15 +6,15 @@ import os
 fileIndex = [10];
 dataDir = "/home/alan/data/bio/ecoli/split/";
 Dsk = "/home/alan/exp/bio/dsk/dsk-1.6906/dsk"
-CosmoPack = "/home/alan/exp/bio/cosmoBowe/cosmo-pack"
-CosmoBuild = "/home/alan/exp/bio/cosmoBowe/cosmo-build"
-CosmoVerify = "/home/alan/exp/bio/cosmoBowe/cosmo-verify"
-CosmoBuildDyn = "/home/alan/exp/bio/cosmoBowe/cosmo-build-dyn"
+CosmoPack = "../cosmo-pack"
+CosmoBuild = "../cosmo-build"
+CosmoVerify = "../cosmo-verify"
+CosmoBuildDyn = "../cosmo-build-dyn"
 #CosmoQuery = "/home/alan/exp/bio/cosmoBowe/cosmo-query"
 OutFile = "./cmpResultsCosmoBowe.txt"
 
-call([Dsk, "temp.fasta", "28"]);
-#call([Dsk, "temp.fasta", "4"]);
+#call([Dsk, "temp.fasta", "28"]);
+call([Dsk, "temp.fasta", "4"]);
     
 call([ CosmoPack, "temp.solid_kmers_binary" ]);
 call([ CosmoVerify, "temp.solid_kmers_binary.packed" ]);

@@ -140,7 +140,6 @@ class debruijn_graph {
 
   vector<node_type> all_preds(const node_type & v) const {
     assert(v < num_nodes());
-    assert(x < sigma + 1);
     // node u -> v : edge i -> j
     size_t j = get<0>(v);
     symbol_type y = _symbol_access(j);
@@ -189,12 +188,19 @@ class debruijn_graph {
     size_t last  = get<1>(range);
     // Try both with and without a flag
     for (symbol_type c = _with_edge_flag(x,false); c <= _with_edge_flag(x, true); c++) {
-      size_t most_recent = m_edges.select(m_edges.rank(last+1, c), c);
-      // if within range, follow forward
-      if (first <= most_recent && most_recent <= last) {
-        // Don't have to check fwd for -1 since we checked for $ above
-        return _edge_to_node(_forward(most_recent));
-      }
+       //      size_t most_recent = m_edges.select(m_edges.rank(last+1, c), c);
+       size_t tmpRank = m_edges.rank(last+1,c);
+
+       if (tmpRank > 0) {
+	  size_t most_recent = m_edges.select(m_edges.rank(last+1, c), c);
+
+	  // if within range, follow forward
+	  if (first <= most_recent && most_recent <= last) {
+
+	     // Don't have to check fwd for -1 since we checked for $ above
+	     return _edge_to_node(_forward(most_recent));
+	  }
+       }
     }
     return -1;
   }
@@ -483,6 +489,56 @@ class debruijn_graph {
       dSize += size_in_bytes( m_node_flags ) * 8;
       dSize += size_in_bytes( m_edges ) * 8;
       return dSize;
+   }
+
+   symbol_type _encode_symbol(uint8_t c) const {
+      return lower_bound(m_alphabet.begin(), m_alphabet.end(), c) - m_alphabet.begin();
+   }
+   
+   template <class InputIterator>
+   bool index(InputIterator in) const {
+      auto c = *in++;
+      symbol_type first_symbol = _encode_symbol(c);
+      // Range is from first edge of first, to last edge of last
+      size_t start = _symbol_start(first_symbol);
+      size_t end   = m_symbol_ends[first_symbol]-1;
+      size_t first = 0, last = 0;
+
+      // find c-labeled pred edge
+      // if outside of range, find c- labeled pred edge
+      for (size_t i = 0; i < k - 2; i++) {
+	 c = *in++;
+
+	 symbol_type x = _encode_symbol(c);
+	 // update range; Within current range, find first and last occurence of c or c-
+	 // first -> succ(x, first)
+	 for (uint8_t y=x<<1; y<(x<<1)+1; y++) {
+	    size_t tmpRank = m_edges.rank(start, y);
+	    if (tmpRank < m_edges.rank(m_edges.size(),y))
+	       first = m_edges.select((m_edges.rank(start, y)) + 1, y);
+	    if (start <= first && first <= end) break;
+	 }
+	 if (!(start <= first && first <= end)) return false;
+	 // last -> pred(x, last)
+	 if (start == end) {
+	    last = first;
+	 } else {
+	    for (uint8_t y=x<<1; y<(x<<1)+1; y++) {
+	       auto rank_temp = m_edges.rank(end + 1, y);
+	       last = m_edges.select((rank_temp), y);
+	       if (start <= last && last <= end) break;
+	    }
+	 }
+	 if (!(start <= last && last <= end)) {
+	    assert(!"(start <= last && last <= end)");
+	 }
+
+	 // Follow each edge forward
+	 start = _forward(first, x);
+	 end   = _forward(last, x);
+	 end   = _last_edge_of_node(_edge_to_node(end));
+      }
+      return true;
    }
 };
 

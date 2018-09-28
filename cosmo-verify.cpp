@@ -12,6 +12,7 @@
 #include "dynBoss.hpp"
 #include "debruijn_graph.hpp"
 #include "algorithm.hpp"
+#include "formatutil.cpp"
 
 using namespace std;
 using namespace sdsl;
@@ -122,6 +123,44 @@ int main(int argc, char* argv[]) {
 	}
 	
      }
+  }
+
+  cerr << "Verifying index...\n";
+  
+  unordered_set<kmer_t> kmers;
+  unordered_set<kmer_t> edgemers;
+  handle_mers( "temp.fasta", dbg.k - 1, kmers, edgemers );
+  vector<kmer_t> vKmers( kmers.begin(), kmers.end() );
+  
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  size_t k = dbg.k - 1;
+  std::uniform_int_distribution<u_int64_t> sample_dis(0, pow(2, 2*k) - 1);
+  size_t nQuery = 5e1;
+  kmer_t kk;
+
+  string merToQuery;
+  std::uniform_int_distribution<u_int64_t> unif_dist (0, kmers.size() - 1);
+  
+  for (unsigned i = 0; i < nQuery; ++i) {
+     //generate a random k-mer
+     kk = sample_dis( gen ) ;
+
+     merToQuery = get_kmer_str( kk, k );
+     //cerr << "Testing " << merToQuery << endl;
+     if ( dbg.index( merToQuery.begin() ) != sdbg.index( merToQuery.begin() ) ) {
+	cerr << "Index failed.\n";
+	exit(0);
+     }
+
+     int randnum = unif_dist( gen );
+     merToQuery = get_kmer_str( vKmers[ randnum ], k );
+     //cerr << "Testing " << merToQuery << endl;
+     if ( dbg.index( merToQuery.begin() ) != sdbg.index( merToQuery.begin() ) ) {
+	cerr << "Index failed.\n";
+	exit(0);
+     }
+     
   }
   
   cerr << "Verification passed!\n";

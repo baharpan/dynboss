@@ -472,7 +472,7 @@ public:
    }
 
    template <class InputIterator>
-   bool index(InputIterator in) const {
+   bool index(InputIterator in)  {
       auto c = *in++;
       symbol_type first_symbol = _encode_symbol(c);
       // Range is from first edge of first, to last edge of last
@@ -480,7 +480,7 @@ public:
       size_t end   = m_symbol_ends[first_symbol]-1;
       size_t first = 0, last = 0;
 
-      // find c-labeled pred edge
+      // find c labeled pred edge
       // if outside of range, find c- labeled pred edge
       for (size_t i = 0; i < k - 2; i++) {
 	 c = *in++;
@@ -489,7 +489,10 @@ public:
 	 // update range; Within current range, find first and last occurence of c or c-
 	 // first -> succ(x, first)
 	 for (uint8_t y=x<<1; y<(x<<1)+1; y++) {
-	    first = p_edges->select((p_edges->rank(start, y)) + 1, y);
+	    size_t tmpRank = p_edges->rank(start, y);
+	    if (tmpRank < p_edges->rank(p_edges->size(), y)) 
+	       first = p_edges->select(tmpRank, y);
+	    
 	    if (start <= first && first <= end) break;
 	 }
 	 if (!(start <= first && first <= end)) return false;
@@ -499,7 +502,8 @@ public:
 	 } else {
 	    for (uint8_t y=x<<1; y<(x<<1)+1; y++) {
 	       auto rank_temp = p_edges->rank(end + 1, y);
-	       last = p_edges->select((rank_temp), y);
+	       //last = p_edges->select((rank_temp) - 1, y);
+	       last = p_edges->select((rank_temp) - 1, y);
 	       if (start <= last && last <= end) break;
 	    }
 	 }
