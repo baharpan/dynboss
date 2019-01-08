@@ -55,7 +55,7 @@ BUILD_REQS=debruijn_graph.hpp io.hpp io.o debug.h
 DYN_BUILD_REQS=dynBoss.hpp io.hpp io.o debug.h
 ASSEM_REQS=debruijn_graph.hpp algorithm.hpp utility.hpp kmer.hpp uint128_t.hpp
 PACK_REQS=lut.hpp debug.h io.hpp io.o sort.hpp kmer.hpp dummies.hpp
-BINARIES= cosmo-pack cosmo-build cosmo-build-dyn cosmo-add-delete.cpp cosmo-benchmark cosmo-benchmark-dyn # cosmo-assemble
+BINARIES= cosmo-pack cosmo-build cosmo-build-dyn cosmo-add-delete cosmo-benchmark cosmo-benchmark-dyn # cosmo-assemble
 
 default: all
 
@@ -67,7 +67,7 @@ io.o: io.hpp io.cpp debug.h dummies.hpp kmer.hpp
 
 # TODO: Roll these all into one... "cosmo"
 cosmo-pack: cosmo-pack.cpp $(PACK_REQS)
-		$(CXX) $(CPP_FLAGS) -o $@ $< io.o
+		$(CXX) $(CPP_FLAGS) -o $@ $< io.o $(DEP_FLAGS)
 
 cosmo-build: cosmo-build.cpp $(BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) -o $@ $< io.o $(DEP_FLAGS) 
@@ -75,7 +75,7 @@ cosmo-build: cosmo-build.cpp $(BUILD_REQS)
 cosmo-build-dyn: cosmo-build.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) $(DYN_FLAGS) -o cosmo-build-dyn $< io.o $(DEP_FLAGS)
 
-cosmo-add-delete.cpp: cosmo-add-delete.cpp $(DYN_BUILD_REQS)
+cosmo-add-delete: cosmo-add-delete.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) -o cosmo-add-delete $< io.o $(DEP_FLAGS)
 
 cosmo-verify: cosmo-verify.cpp $(DYN_BUILD_REQS)
