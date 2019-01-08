@@ -3,8 +3,8 @@ Dynamic succinct de Bruijn graph
 
 ## How to compile
 ```
-#change the directorie on Makefile
-make
+#change the paths on Makefile
+make DYNAMIC=1
 ```
 ## How to run
 ```
