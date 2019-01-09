@@ -7,7 +7,8 @@
 
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/wavelet_trees.hpp>
-
+ 
+ 
 #include "io.hpp"
 //#ifdef DYNAMIC
 #include "dynBoss.hpp"
@@ -186,7 +187,7 @@ int main(int argc, char* argv[]) {
     static const char alphanum[] = "ACGT";
     vector<string>all_kmers;
     int stringLength = sizeof(alphanum) - 1;
-    while (all_kmers.size() < 1000 ){
+    while (all_kmers.size() < 10000 ){
         string kmer;
         while(kmer.size() <dbg.k )
             kmer += alphanum[rand() % stringLength];
@@ -286,7 +287,7 @@ int main(int argc, char* argv[]) {
 
 cerr << "Verification passed!\n";
 cerr << "===============================\n";
-cerr << "Deleting some randome nodes\n";
+cerr << "Deleting some random nodes\n";
 for (size_t i = 0; i < dbg.num_nodes(); i += dbg.num_nodes()/3)
   dbg = Delete_node(dbg , dbg.node_label(i));
   cerr << "new greph     : " << endl;
