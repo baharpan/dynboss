@@ -7,8 +7,8 @@
 
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/wavelet_trees.hpp>
- 
- 
+
+
 #include "io.hpp"
 //#ifdef DYNAMIC
 #include "dynBoss.hpp"
@@ -70,12 +70,12 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
 
     //If added edge is now at the begining of a read, we should delete the dummies
     //of former first edge of the read (only if their outdegree is 1)
-    bool remove_dummy = true;
-    if (dbg.outdegree(dbg._edge_to_node(start)) > 1 ) remove_dummy = false;
+    //bool remove_dummy = true;
+    //if (dbg.outdegree(dbg._edge_to_node(start)) > 1 ) remove_dummy = false;
     string incoming_dummy = '$'+ kmer.substr(1);
 
     //start is replaced with _forward(start) already at the final step of addition, so to check the indegree "dbg.indegree(dbg._edge_to_node(start))" is correct.
-    if (addition && dbg.indegree(dbg._edge_to_node(start)) > 1 && dbg.index(incoming_dummy.begin(),0) == 1 && remove_dummy){
+    if (addition && dbg.indegree(dbg._edge_to_node(start)) > 1 && dbg.index(incoming_dummy.begin(),0) == 1){ //&& remove_dummy){
         pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0);
         size_t start = start_and_position.first;
         size_t i = 0;
@@ -83,14 +83,15 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
 
         while ( i < dbg.k){
             size_t out = dbg.outdegree(dbg._edge_to_node(start));
-            dbg.delete_edge(start,incoming_dummy[dbg.k-1-i]);
+            dbg.delete_edge(start);
+            if (out > 1 ) break;
             size_t backward_edge;
             start = (right_place) ? start : start-1; //because one edge before start is already deleted
             backward_edge = dbg._backward(start);
             right_place = (backward_edge >= start) ?  false : true;
             start = backward_edge;
             i++;
-            if (out > 1 ) break;
+
           }
     }
 
@@ -119,7 +120,7 @@ dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
     bool remove_dummy = true;
     if (dbg.outdegree(dbg._edge_to_node(start)) > 1 ) remove_dummy = false;
     string incoming_dummy2 = dbg.edge_label(dbg._backward(start));
-    dbg.delete_edge(start,dbg._encode_symbol(kmer[dbg.k-1]));
+    dbg.delete_edge(start);
 
     //if (dbg.index(kmer.begin(), 0) != 1 ) cout<<"now the edge is deleted"<<endl;
 
@@ -136,7 +137,7 @@ dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
 
         while (i < dbg.k){
             size_t out = dbg.outdegree(dbg._edge_to_node(start));
-             dbg.delete_edge(start,incoming_dummy[dbg.k-1-i]);
+             dbg.delete_edge(start);
              if (out > 1) break;
              size_t backward_edge;
              start = (right_place) ? start : start-1; //because one edge before start is already deleted

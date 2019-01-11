@@ -482,7 +482,7 @@ public:
       return lower_bound(m_alphabet.begin(), m_alphabet.end(), c) - m_alphabet.begin();
    }
 
-  void delete_edge(size_t start, symbol_type x){
+  void delete_edge(size_t start){
       size_t in = indegree(_edge_to_node(_forward(start)));
       size_t out = outdegree(_edge_to_node(start));
       size_t forward_index = _forward(start);
@@ -720,7 +720,7 @@ public:
 
    	 end   = _forward(last, x);
    	 end   = _last_edge_of_node(_edge_to_node(end));
-
+ //cout<< "start: "<<start<<edge_label(start)<< " first1: "<<first<<edge_label(first)<< "last: "<<last<<edge_label(last)<<" end: "<<end<< edge_label(end)<< endl;
          }
 
          return true;
