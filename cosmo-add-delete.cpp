@@ -44,8 +44,7 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
   params.input_filename  = input_filename_arg.getValue();
   params.output_prefix   = output_prefix_arg.getValue();
 }
-dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer);
-dyn_boss Delete_node (dyn_boss dbg, std::string kmer);
+
 dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
     pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 1);
     size_t start = start_and_position.first;
