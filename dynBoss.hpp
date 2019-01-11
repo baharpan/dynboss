@@ -771,12 +771,11 @@ public:
 	       if (start <= last && last <= end) break;
 	    }
 	 }
-	 if (!(start <= last && last <= end)) {
-	    assert(!"(start <= last && last <= end)");
-	 }
+	 assert(!(start <= last && last <= end));
+	 
 	 start = _forward(first, x);
 	 end   = _forward(last, x);
-   end   = _last_edge_of_node(_edge_to_node(end));
+	 end   = _last_edge_of_node(_edge_to_node(end));
 
         }
 

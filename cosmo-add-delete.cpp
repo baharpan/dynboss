@@ -45,7 +45,7 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
   params.output_prefix   = output_prefix_arg.getValue();
 }
 
-dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
+void Add_Edge (dyn_boss& dbg,  std::string kmer, bool addition){
     pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 1);
     size_t start = start_and_position.first;
     size_t pos = start_and_position.second;
@@ -94,7 +94,7 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
           }
     }
 
-    return (dbg);
+    return;
 }
 
 dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
@@ -106,7 +106,7 @@ dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
     if (dbg.edge_label(dbg._forward(start))[dbg.k-1] != '$' && dbg.indegree(dbg._edge_to_node(dbg._forward(start))) == 1) {
         string added_kmer = "$";
         added_kmer += dbg.node_label(dbg._edge_to_node(dbg._forward(start)));
-        dbg = Add_Edge(dbg,added_kmer,0);
+        Add_Edge(dbg,added_kmer,0);
         start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0);
         start = start_and_position.first;
         size_t dif = 0;
@@ -187,7 +187,8 @@ int main(int argc, char* argv[]) {
     static const char alphanum[] = "ACGT";
     vector<string>all_kmers;
     int stringLength = sizeof(alphanum) - 1;
-    while (all_kmers.size() < 10000 ){
+    size_t nChanges = 1000;
+    while (all_kmers.size() < nChanges ){
         string kmer;
         while(kmer.size() <dbg.k )
             kmer += alphanum[rand() % stringLength];
@@ -195,9 +196,9 @@ int main(int argc, char* argv[]) {
           }
 
     cerr<<"number of kmers to process: "<<all_kmers.size()<<endl;
-    for (size_t i; i< all_kmers.size();i++){
+    for (size_t i = 0; i< all_kmers.size();i++){
       if (dbg.index(all_kmers[i].begin(),0) == 0)
-        dbg = Add_Edge (dbg, all_kmers[i] ,1);
+	 Add_Edge (dbg, all_kmers[i] ,1);
       if (dbg.index(all_kmers[i].begin(),0) == 0){
         cerr<<"failed to add kmer "<<i<<endl;
         exit(0);
@@ -205,23 +206,23 @@ int main(int argc, char* argv[]) {
     }
     cerr<<"DONE with addition of all kmers\n";
 
-    for (size_t i; i< all_kmers.size();i++){
-     if (dbg.index(all_kmers[i].begin(),0) == 1)
-         dbg = Delete_Edge (dbg, all_kmers[i]);
-     if (dbg.index(all_kmers[i].begin(),0) == 1){
-       cerr<<"failed to delete kmer "<<i<<endl;
-       exit(0);
-         }
-       }
-    cerr << "DONE with deletion of all kmers\n";
-    cerr << "===============================\n";
-    cerr << "new greph     : " << endl;
-    cerr << "k             : " << dbg.k << endl;
-    cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
-    cerr << "num_edges()   : " << dbg.num_edges() << endl;
-    bs = dbg.bit_size();
-    cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
-    cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+    // for (size_t i = 0; i< all_kmers.size();i++){
+    //  if (dbg.index(all_kmers[i].begin(),0) == 1)
+    //      dbg = Delete_Edge (dbg, all_kmers[i]);
+    //  if (dbg.index(all_kmers[i].begin(),0) == 1){
+    //    cerr<<"failed to delete kmer "<<i<<endl;
+    //    exit(0);
+    //      }
+    //    }
+    // cerr << "DONE with deletion of all kmers\n";
+    // cerr << "===============================\n";
+    // cerr << "new greph     : " << endl;
+    // cerr << "k             : " << dbg.k << endl;
+    // cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
+    // cerr << "num_edges()   : " << dbg.num_edges() << endl;
+    // bs = dbg.bit_size();
+    // cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+    // cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
     /* for (size_t i = 0; i<dbg.num_edges(); i++)
          cout<<dbg.edge_label(i)<< " " <<i<<endl;
@@ -230,7 +231,8 @@ int main(int argc, char* argv[]) {
          cout<<dbg.node_label(i)<< " " <<i<<endl;*/
 
 	cerr << "Verifying edges..." << endl;
-  for (size_t i = 0; i < dbg.num_edges(); i+=dbg.num_edges()/5) {
+	size_t nCheck = 10000;
+  for (size_t i = 0; i < dbg.num_edges(); i+=dbg.num_edges()/nCheck) {
      if (dbg.edge_label(i) != sdbg.edge_label(i)) {
 	cerr << "Edge verification failed.\n";
 	exit(0);
@@ -238,7 +240,7 @@ int main(int argc, char* argv[]) {
   }
 
   cerr << "Verifying nodes..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/5) {
+  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nCheck) {
      if (dbg.node_label(i) != sdbg.node_label(i)) {
 	cerr << "Node verification failed.\n";
 	exit(0);
@@ -246,7 +248,7 @@ int main(int argc, char* argv[]) {
   }
 
   cerr << "Verifying outdegree..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/5) {
+  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nCheck) {
      if ( dbg.outdegree( i ) != sdbg.outdegree(i) ) {
 	cerr << "outdegree verification failed.\n";
 	exit(0);
@@ -254,7 +256,7 @@ int main(int argc, char* argv[]) {
   }
 
   cerr << "Verifying indegree..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/5) {
+  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nCheck) {
      if (dbg.indegree( i ) != sdbg.indegree(i)) {
 	cerr << "indegree verification failed.\n";
 	exit(0);
@@ -262,7 +264,7 @@ int main(int argc, char* argv[]) {
   }
 
   cerr << "Verifying incoming..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/5) {
+  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nCheck) {
      for (uint64_t j = 0; j < 5; ++j) {
   	//cerr << i << ".incoming(" << j << "): " << dbg.incoming(i, j) << endl;
 	if (dbg.incoming( i,j ) != sdbg.incoming(i,j)) {
@@ -274,7 +276,7 @@ int main(int argc, char* argv[]) {
   }
 
   cerr << "Verifying outgoing..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/5) {
+  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nCheck) {
      for (uint64_t j = 0; j < 5; ++j) {
   	//cerr << i << ".incoming(" << j << "): " << dbg.incoming(i, j) << endl;
 	if (dbg.outgoing( i,j ) != sdbg.outgoing(i,j)) {
