@@ -397,9 +397,9 @@ public:
       if (x == 0) return 0;
       size_t start = _symbol_start(x);
       size_t nth   = p_edges->rank(i, _with_edge_flag(x, false));
-       if ((*p_edges)[i] % 2 == 1) nth-=1;
-       // Bahar
-       if (x == 4 && p_node_flags->rank0(start+1) + nth - 1 >= num_nodes()) return num_edges();
+      if ((*p_edges)[i] % 2 == 1) nth-=1;
+      // Bahar
+      if (x == 4 && p_node_flags->rank0(start+1) + nth - 1 >= num_nodes()) return num_edges();
       size_t next = p_node_flags->select0(p_node_flags->rank0(start+1) + nth - 1);
 
       return next;
