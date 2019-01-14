@@ -209,8 +209,6 @@ int main(int argc, char* argv[]) {
     cerr<<"DONE with addition of all kmers\n";
     cerr << "time per op: " << t_elapsed / nOps << endl;
 
-    exit(0); 
-    
     cerr<<"Beginning removal...\n";
     for (size_t i = 0; i< all_kmers.size();i++){
        cerr << i << '\n';
