@@ -67,7 +67,6 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
     }
 
 
-
     //If added edge is now at the begining of a read, we should delete the dummies
     //of former first edge of the read (only if their outdegree is 1)
 
@@ -79,22 +78,22 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
         size_t start = start_and_position.first;
         size_t pos = start_and_position.second;
         if (pos == 32){
-        size_t i = 0;
-        bool right_place = true; //always start < ref because $A is before AA
+	   size_t i = 0;
+	   bool right_place = true; //always start < ref because $A is before AA
 
-        while ( i < dbg.k){
-            size_t out = dbg.outdegree(dbg._edge_to_node(start));
-            dbg.delete_edge(start,incoming_dummy);
-            if (out > 1 ) break;
-            size_t backward_edge;
-            start = (right_place) ? start : start-1; //because one edge before start is already deleted
-            backward_edge = dbg._backward(start);
-            right_place = (backward_edge >= start) ?  false : true;
-            start = backward_edge;
-            incoming_dummy = '$' + incoming_dummy.substr(0,dbg.k-1);
-            i++;
+	   while ( i < dbg.k){
+	      size_t out = dbg.outdegree(dbg._edge_to_node(start));
+	      dbg.delete_edge(start,incoming_dummy);
+	      if (out > 1 ) break;
+	      size_t backward_edge;
+	      start = (right_place) ? start : start-1; //because one edge before start is already deleted
+	      backward_edge = dbg._backward(start);
+	      right_place = (backward_edge >= start) ?  false : true;
+	      start = backward_edge;
+	      incoming_dummy = '$' + incoming_dummy.substr(0,dbg.k-1);
+	      i++;
 
-          }
+	   }
         }
     }
 
@@ -171,9 +170,12 @@ dyn_boss Delete_node (dyn_boss dbg, std::string kmer){
 }
 
 int main(int argc, char* argv[]) {
-  parameters_t p;
+
+
+   parameters_t p;
   parse_arguments(argc, argv, p);
 
+  cerr << "Loading dynamic BOSS..." << endl;
   ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
     dyn_boss dbg;
     dbg.load_from_packed_edges( input, "$ACGT" );
@@ -190,32 +192,30 @@ int main(int argc, char* argv[]) {
     static const char alphanum[] = "ACGT";
     vector<string>all_kmers;
     int stringLength = sizeof(alphanum) - 1;
-    while (all_kmers.size() < 10000 ){
+    size_t nOps = 10000;
+    while (all_kmers.size() < nOps ){
         string kmer;
         while(kmer.size() <dbg.k )
             kmer += alphanum[rand() % stringLength];
         all_kmers.push_back(kmer);
-          }
+    }
 
     cerr<<"number of kmers to process: "<<all_kmers.size()<<endl;
-    for (size_t i; i< all_kmers.size();i++){
-      //if (dbg.index(all_kmers[i].begin(),0) == 0)
-        dbg = Add_Edge (dbg, all_kmers[i] ,1);
-      /*if (dbg.index(all_kmers[i].begin(),0) == 0){
-        cerr<<"failed to add kmer "<<i<<endl;
-        exit(0);
-      }*/
+    clock_t t_start = clock();
+    for (size_t i = 0; i< all_kmers.size();i++){
+       dbg = Add_Edge (dbg, all_kmers[i] ,1);
     }
+    double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
     cerr<<"DONE with addition of all kmers\n";
+    cerr << "time per op: " << t_elapsed / nOps << endl;
 
-    for (size_t i; i< all_kmers.size();i++){
-    // if (dbg.index(all_kmers[i].begin(),0) == 1)
-         dbg = Delete_Edge (dbg, all_kmers[i]);
-    /* if (dbg.index(all_kmers[i].begin(),0) == 1){
-       cerr<<"failed to delete kmer "<<i<<endl;
-       exit(0);
-     }*/
-   }
+    exit(0); 
+    
+    cerr<<"Beginning removal...\n";
+    for (size_t i = 0; i< all_kmers.size();i++){
+       cerr << i << '\n';
+       dbg = Delete_Edge (dbg, all_kmers[i]);
+    }
     cerr << "DONE with deletion of all kmers\n";
     cerr << "===============================\n";
     cerr << "new greph     : " << endl;

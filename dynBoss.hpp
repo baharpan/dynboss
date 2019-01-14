@@ -589,28 +589,28 @@ public:
 
   size_t add(size_t start, symbol_type x ,string  kmer, bool last_node){
 
-  if (start == 0){
-	   for (size_t m = 0; m <4; ++m){
-	      if (edge_label(m) == string(k-1, '$')+kmer[k-1])
-		      return start;
-	       }
+     if (start == 0){
+	for (size_t m = 0; m <4; ++m){
+	   if (edge_label(m) == string(k-1, '$')+kmer[k-1])
+	      return start;
 	}
+     }
 
-      bool last_node_present = false;
-      size_t check;
+     bool last_node_present = false;
+     size_t check;
 
-      if (last_node){
-          if (index(kmer.substr(1).begin(),0) == 1) {
-            last_node_present = true;
-            size_t i_last  = _next_edge(start, _encode_symbol(kmer[31]));
-            check = (i_last == num_edges() || i_last - start >= 4) ? 0 : i_last - start;
+     if (last_node){
+	if (index(kmer.substr(1).begin(),0) == 1) {
+	   last_node_present = true;
+	   size_t i_last  = _next_edge(start, _encode_symbol(kmer[31]));
+	   check = (i_last == num_edges() || i_last - start >= 4) ? 0 : i_last - start;
         }
-      }
+     }
 
-      size_t to_be_increased = _encode_symbol(kmer[k-2]);//_encode_symbol(edge_label(start)[k-2]);
-      size_t ins = 2*x;
-      int outdeg = -1;
-        if (ins > (*p_edges)[start]){
+     size_t to_be_increased = _encode_symbol(kmer[k-2]);//_encode_symbol(edge_label(start)[k-2]);
+     size_t ins = 2*x;
+     int outdeg = -1;
+     if (ins > (*p_edges)[start]){
           outdeg = outdegree (_edge_to_node(start));
           if (outdeg == 0) { //outgoing dummy
             p_edges->remove(start);
@@ -621,7 +621,7 @@ public:
               for (i = 1; i < outdeg; ++i){
                   if (ins < (*p_edges)[start+i])
                       break;
-                    }
+	      }
               start += i;
               p_edges->insert(start,ins);
               p_node_flags->insert(start,1);
@@ -629,48 +629,47 @@ public:
 
      }
      else{
-         if ((*p_edges)[start] != ins){
-             p_edges->insert(start,ins);
-             p_node_flags->insert(start+1,1);
-       }
+	if ((*p_edges)[start] != ins){
+	   p_edges->insert(start,ins);
+	   p_node_flags->insert(start+1,1);
+	}
      }
 
 
-      for (symbol_type i = 0; i < sigma+1; ++i){
-          if (outdeg != 0 && i >= to_be_increased){
-              m_symbol_ends[i]++;
-          }
-      }
+     for (symbol_type i = 0; i < sigma+1; ++i){
+	if (outdeg != 0 && i >= to_be_increased){
+	   m_symbol_ends[i]++;
+	}
+     }
 
 
-    int d_insertion = -1;
+     int d_insertion = -1;
 
-    if (!last_node_present) d_insertion = _forward(start);
+     if (!last_node_present) d_insertion = _forward(start);
 
 
 
-    if (d_insertion != -1){ //destination node is not present
-     p_edges->insert(d_insertion , 0);
-     p_node_flags->insert(d_insertion , 0);
-     m_num_nodes++;
+     if (d_insertion != -1){ //destination node is not present
+	p_edges->insert(d_insertion , 0);
+	p_node_flags->insert(d_insertion , 0);
+	m_num_nodes++;
 
-    }
-    //make the inderee > 1
-    else {
+     } //make the indegree > 1
+     else {
         p_edges->remove(start+check);
         p_edges->insert(start+check,ins+1);
-    }
-      if (start >= d_insertion)
-          start++;
-      for (symbol_type i = 0; i < sigma+1; ++i){
+     }
+     if (start >= d_insertion)
+	start++;
+     for (symbol_type i = 0; i < sigma+1; ++i){
 
-          if (d_insertion != -1 && i >= x){
-              m_symbol_ends[i]++;
-          }
-   }
+	if (d_insertion != -1 && i >= x){
+	   m_symbol_ends[i]++;
+	}
+     }
 
-      return start;
-    }
+     return start;
+  }
 
    template <class InputIterator>
    bool index(InputIterator in , bool edge)  {
