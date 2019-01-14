@@ -186,21 +186,25 @@ public:
       auto range = _node_range(u);
       size_t first = get<0>(range);
       size_t last  = get<1>(range);
+
+
       // Try both with and without a flag
       for (symbol_type c = _with_edge_flag(x,false); c <= _with_edge_flag(x, true); c++) {
 	 //size_t most_recent = p_edges->select(p_edges->rank(last+1, c), c);
 
 	 size_t tmpRank = p_edges->rank(last+1,c);
-	 if (tmpRank > 0) {
+   if (tmpRank == 0) continue;
+	 //if (tmpRank > 0) {
 	    size_t most_recent = p_edges->select(p_edges->rank(last+1, c) - 1, c);
+
 
 	    // if within range, follow forward
 	    if (first <= most_recent && most_recent <= last) {
 
 	       // Don't have to check fwd for -1 since we checked for $ above
-	       return _edge_to_node(_forward(most_recent));
+	       return _forward(most_recent);
 	    }
-	 }
+	 //}
       }
       return -1;
    }
@@ -482,16 +486,16 @@ public:
       return lower_bound(m_alphabet.begin(), m_alphabet.end(), c) - m_alphabet.begin();
    }
 
-  void delete_edge(size_t start){
+  void delete_edge(size_t start , string kmer){
       size_t in = indegree(_edge_to_node(_forward(start)));
       size_t out = outdegree(_edge_to_node(start));
       size_t forward_index = _forward(start);
       size_t forward_lab = (*p_edges)[_forward(start)];
-      size_t forward_to_be_decreased = _encode_symbol(edge_label(_forward(start))[k-2]);
+      size_t forward_to_be_decreased = _encode_symbol(kmer[31]);//(*p_edges)[start]/2;//_encode_symbol(edge_label(_forward(start))[k-2]);
 
       if (in > 1 && out > 1){
 
-          size_t to_be_decreased = _encode_symbol(edge_label(start)[k-2]);
+          size_t to_be_decreased = _encode_symbol(kmer[30]);//edge_label(start)[k-2]);
           p_edges->remove(start);
           for (symbol_type i = 0; i < sigma+1; ++i){
               if ( i >= to_be_decreased){
@@ -542,7 +546,7 @@ public:
 
           if (out >  1 ) {
 
-              size_t to_be_decreased = _encode_symbol(edge_label(start)[k-2]);
+              size_t to_be_decreased = _encode_symbol(kmer[30]);//edge_label(start)[k-2]);
 
                p_edges->remove(start);
                for (symbol_type i = 0; i < sigma+1; ++i){
@@ -583,7 +587,7 @@ public:
   }
 
 
-  size_t add(size_t start, symbol_type x ,string  kmer){
+  size_t add(size_t start, symbol_type x ,string  kmer, bool last_node){
 
   if (start == 0){
 	   for (size_t m = 0; m <4; ++m){
@@ -595,20 +599,15 @@ public:
       bool last_node_present = false;
       size_t check;
 
-      if (index(kmer.substr(1).begin(),0) == 1) {
-
-          last_node_present = true;
-          check = 1;
-          while (check < 4){
-              if (edge_label(start+check).substr(1) == kmer.substr(1))
-                  break;
-              else check++;
-          }
-          if (check == 4) check = 0;
-
+      if (last_node){
+          if (index(kmer.substr(1).begin(),0) == 1) {
+            last_node_present = true;
+            size_t i_last  = _next_edge(start, _encode_symbol(kmer[31]));
+            check = (i_last == num_edges() || i_last - start >= 4) ? 0 : i_last - start;
+        }
       }
 
-      size_t to_be_increased = _encode_symbol(edge_label(start)[k-2]);
+      size_t to_be_increased = _encode_symbol(kmer[k-2]);//_encode_symbol(edge_label(start)[k-2]);
       size_t ins = 2*x;
       int outdeg = -1;
         if (ins > (*p_edges)[start]){
@@ -644,9 +643,10 @@ public:
       }
 
 
-      int d_insertion = -1;
+    int d_insertion = -1;
 
-      if (!last_node_present) d_insertion = _forward(start);
+    if (!last_node_present) d_insertion = _forward(start);
+
 
 
     if (d_insertion != -1){ //destination node is not present
@@ -720,7 +720,7 @@ public:
 
    	 end   = _forward(last, x);
    	 end   = _last_edge_of_node(_edge_to_node(end));
- //cout<< "start: "<<start<<edge_label(start)<< " first1: "<<first<<edge_label(first)<< "last: "<<last<<edge_label(last)<<" end: "<<end<< edge_label(end)<< endl;
+ 
          }
 
          return true;
@@ -771,11 +771,12 @@ public:
 	       if (start <= last && last <= end) break;
 	    }
 	 }
-	 assert(!(start <= last && last <= end));
-	 
+	 if (!(start <= last && last <= end)) {
+	    assert(!"(start <= last && last <= end)");
+	 }
 	 start = _forward(first, x);
 	 end   = _forward(last, x);
-	 end   = _last_edge_of_node(_edge_to_node(end));
+   end   = _last_edge_of_node(_edge_to_node(end));
 
         }
 
