@@ -69,33 +69,36 @@ int main(int argc, char* argv[]) {
     int stringLength = sizeof(alphanum) - 1;
 
     size_t nOps = 10000;
+
     while (all_kmers.size() < nOps ){
-        string kmer;
-        while(kmer.size() <dbg.k )
-            kmer += alphanum[rand() % stringLength];
-            all_kmers.push_back(kmer);
-          }
+       
+       size_t pos;
+       string kmer;
+       do {
+	  pos = rand() % dbg.num_edges();
+	  kmer = dbg.edge_label( pos );
+       } while ( kmer.find('$') != string::npos );
+       
+       all_kmers.push_back(kmer);
+    }
 
     cerr<<"number of kmers to process: "<<all_kmers.size()<<endl;
     clock_t t_start = clock();
+    
+    
     for (size_t i = 0; i< all_kmers.size();i++){
-      //if (dbg.index(all_kmers[i].begin(),0) == 0)
-        dbg = Add_Edge (dbg, all_kmers[i] ,1);
-      /*if (dbg.index(all_kmers[i].begin(),0) == 0){
-        cerr<<"failed to add kmer "<<i<<endl;
-        exit(0);
-      }*/
+       if (dbg.index( all_kmers[i].begin(), 0 ) != 0)
+	  dbg = Delete_Edge (dbg, all_kmers[i]);
     }
     double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-    cerr<<"DONE with addition of all kmers\n";
+    cerr<<"DONE with deletion of all kmers\n";
     cerr << "Time per Op: " << t_elapsed / nOps << endl;
     t_start = clock();
     for (size_t i = 0; i< all_kmers.size();i++){
-       dbg = Delete_Edge (dbg, all_kmers[i]);
-       
+       dbg = Add_Edge (dbg, all_kmers[i],1);
     }
     t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-    cerr << "DONE with deletion of all kmers\n";
+    cerr << "DONE with addition of all kmers\n";
     cerr << "Time per Op: " << t_elapsed / nOps << endl;
     cerr << "===============================\n";
     cerr << "new greph     : " << endl;

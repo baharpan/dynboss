@@ -20,7 +20,6 @@
 
 using namespace std;
 using namespace sdsl;
-//using namespace dyn;
 
 class dyn_boss {
 public:
@@ -52,7 +51,7 @@ public:
 	     dyn::gap_bv* node_flags,
 	     dyn::wt_str* edges,
 	     array<size_t, 1 + sigma>& symbol_ends,
-	     string& alphabet) :
+	     string alphabet) :
       k( in_k ),
       p_node_flags( node_flags ),
       p_edges( edges ),
@@ -807,5 +806,136 @@ public:
       return dSize;
    }
 };
+
+dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
+    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 1,kmer);
+    size_t start = start_and_position.first;
+    size_t pos = start_and_position.second;
+    vector<size_t> to_add;
+	  //pos = (addition == 1) ? pos+1 : pos;
+    for (size_t i = pos; i < kmer.size(); i++) {
+        if (kmer[i]!= '$')
+        to_add.push_back (dbg._encode_symbol(kmer[i]));
+    }
+
+
+
+    size_t i = 0;
+
+    while (i < to_add.size()){
+        kmer = (i == 0) ? dbg.node_label(dbg._edge_to_node(start)) += dbg._map_symbol(to_add[i]) : kmer.substr(1) += dbg._map_symbol(to_add[i]);
+        start = (i == to_add.size()-1) ? dbg.add(start,to_add[i],kmer, 1) : dbg.add(start,to_add[i],kmer, 0);
+        start = dbg._forward(start);
+        i++;
+    }
+
+
+
+    //If added edge is now at the begining of a read, we should delete the dummies
+    //of former first edge of the read (only if their outdegree is 1)
+
+    string incoming_dummy = '$'+ kmer.substr(1);
+
+    //start is replaced with _forward(start) already at the final step of addition, so to check the indegree "dbg.indegree(dbg._edge_to_node(start))" is correct.
+    if (addition && dbg.indegree(dbg._edge_to_node(start)) > 1){
+        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0, incoming_dummy);
+        size_t start = start_and_position.first;
+        size_t pos = start_and_position.second;
+        if (pos == dbg.k){
+        size_t i = 0;
+        bool right_place = true; //always start < ref because $A is before AA
+
+        while ( i < dbg.k){
+            size_t out = dbg.outdegree(dbg._edge_to_node(start));
+            dbg.delete_edge(start,incoming_dummy);
+            if (out > 1 ) break;
+            size_t backward_edge;
+            start = (right_place) ? start : start-1; //because one edge before start is already deleted
+            backward_edge = dbg._backward(start);
+            right_place = (backward_edge >= start) ?  false : true;
+            start = backward_edge;
+            incoming_dummy = '$' + incoming_dummy.substr(0,dbg.k-1);
+            i++;
+
+          }
+        }
+    }
+
+    return (dbg);
+}
+
+dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
+    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0, kmer);
+    size_t start = start_and_position.first;
+    size_t pos = start_and_position.second;
+
+    //adding dummies of next edge
+    if ((*dbg.p_edges)[dbg._forward(start)] != 0 && dbg.indegree(dbg._edge_to_node(dbg._forward(start))) == 1) {
+        string added_kmer = "$";
+        added_kmer += kmer.substr(1);
+        dbg = Add_Edge(dbg,added_kmer,0);
+        start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0, kmer);
+        start = start_and_position.first;
+
+        int dif = dbg._encode_symbol(kmer[dbg.k-1]) - (*dbg.p_edges)[start]; //careful
+        if(dif > 0) start += dif;
+
+    }
+
+    bool remove_dummy = true;
+    if (dbg.outdegree(dbg._edge_to_node(start)) > 1 ) remove_dummy = false;
+
+    dbg.delete_edge(start,kmer);
+
+
+
+    //if deleting the first edge of a read, all dummies should be deleted
+    string incoming_dummy = '$'+ kmer.substr(0,dbg.k-1);
+
+    if (remove_dummy){
+        size_t ref = start;
+        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0,kmer);
+        size_t start = start_and_position.first;
+        size_t pos = start_and_position.second;
+        if (pos == dbg.k){
+        size_t i = 0;
+        bool right_place;
+        right_place = (start >= ref) ?  false : true;
+
+        while (i < dbg.k){
+            size_t out = dbg.outdegree(dbg._edge_to_node(start));
+             dbg.delete_edge(start,incoming_dummy);
+             if (out > 1) break;
+             size_t backward_edge;
+             start = (right_place) ? start : start-1; //because one edge before start is already deleted
+             backward_edge = dbg._backward(start);
+             right_place = (backward_edge >= start) ?  false : true;
+             start = backward_edge;
+             incoming_dummy = '$'+incoming_dummy.substr(0,dbg.k-1);
+
+             i++;
+         }
+       }
+    }
+    return (dbg);
+}
+
+
+dyn_boss Delete_node (dyn_boss dbg, std::string kmer){
+   char base[] = {'$','A','C','G','T'};
+    for (size_t i = 0; i < 5; i++){
+        string for_node = kmer.substr(1) + base[i];
+        if (dbg.index(for_node.begin() , 0) == 1 ){
+            dbg = Delete_Edge(dbg , kmer+base[i]);
+        }
+    }
+    for (size_t i = 0; i < 5; i++){
+        string back_node = base[i] + kmer.substr(0,dbg.k-2);
+        if (dbg.index(back_node.begin() , 0) == 1 ){
+            dbg = Delete_Edge(dbg , base[i]+kmer);
+        }
+    }
+    return (dbg);
+}
 
 #endif
