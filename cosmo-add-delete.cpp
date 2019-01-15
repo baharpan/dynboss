@@ -46,11 +46,11 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 }
 
 dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
-    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 1);
+    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 1,kmer);
     size_t start = start_and_position.first;
     size_t pos = start_and_position.second;
     vector<size_t> to_add;
-//	pos = (addition == 1) ? pos+1 : pos;
+	  //pos = (addition == 1) ? pos+1 : pos;
     for (size_t i = pos; i < kmer.size(); i++) {
         if (kmer[i]!= '$')
         to_add.push_back (dbg._encode_symbol(kmer[i]));
@@ -76,7 +76,7 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
 
     //start is replaced with _forward(start) already at the final step of addition, so to check the indegree "dbg.indegree(dbg._edge_to_node(start))" is correct.
     if (addition && dbg.indegree(dbg._edge_to_node(start)) > 1){
-        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0);
+        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0, incoming_dummy);
         size_t start = start_and_position.first;
         size_t pos = start_and_position.second;
         if (pos == dbg.k){
@@ -103,7 +103,7 @@ dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
 }
 
 dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
-    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0);
+    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0, kmer);
     size_t start = start_and_position.first;
     size_t pos = start_and_position.second;
 
@@ -112,12 +112,12 @@ dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
         string added_kmer = "$";
         added_kmer += kmer.substr(1);
         dbg = Add_Edge(dbg,added_kmer,0);
-        start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0);
+        start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 0, kmer);
         start = start_and_position.first;
 
         int dif = dbg._encode_symbol(kmer[dbg.k-1]) - (*dbg.p_edges)[start]; //careful
         if(dif > 0) start += dif;
-	
+
     }
 
     bool remove_dummy = true;
@@ -129,9 +129,10 @@ dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
 
     //if deleting the first edge of a read, all dummies should be deleted
     string incoming_dummy = '$'+ kmer.substr(0,dbg.k-1);
+
     if (remove_dummy){
         size_t ref = start;
-        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0);
+        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0,kmer);
         size_t start = start_and_position.first;
         size_t pos = start_and_position.second;
         if (pos == dbg.k){
@@ -149,6 +150,7 @@ dyn_boss Delete_Edge (dyn_boss dbg, std::string kmer){
              right_place = (backward_edge >= start) ?  false : true;
              start = backward_edge;
              incoming_dummy = '$'+incoming_dummy.substr(0,dbg.k-1);
+
              i++;
          }
        }
@@ -188,6 +190,8 @@ int main(int argc, char* argv[]) {
     cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
     cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
     dyn_boss sdbg = dbg;
+
+
     static const char alphanum[] = "ACGT";
     vector<string>all_kmers;
     int stringLength = sizeof(alphanum) - 1;
@@ -195,7 +199,7 @@ int main(int argc, char* argv[]) {
         string kmer;
         while(kmer.size() <dbg.k )
             kmer += alphanum[rand() % stringLength];
-        all_kmers.push_back(kmer);
+            all_kmers.push_back(kmer);
           }
 
     cerr<<"number of kmers to process: "<<all_kmers.size()<<endl;
@@ -208,7 +212,6 @@ int main(int argc, char* argv[]) {
       }*/
     }
     cerr<<"DONE with addition of all kmers\n";
-
     for (size_t i; i< all_kmers.size();i++){
     // if (dbg.index(all_kmers[i].begin(),0) == 1)
          dbg = Delete_Edge (dbg, all_kmers[i]);
@@ -227,7 +230,7 @@ int main(int argc, char* argv[]) {
     cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
     cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
-/*     for (size_t i = 0; i<dbg.num_edges(); i++)
+  /*   for (size_t i = 0; i<dbg.num_edges(); i++)
          cout<<dbg.edge_label(i)<< " " <<i<<endl;
 
      for (size_t i=0; i < dbg.num_nodes();i++)

@@ -721,7 +721,7 @@ public:
 
    	 end   = _forward(last, x);
    	 end   = _last_edge_of_node(_edge_to_node(end));
- 
+
          }
 
          return true;
@@ -730,11 +730,16 @@ public:
 
    template <class InputIterator>
 
-   pair<size_t, size_t> index_finder_for_add_delete(InputIterator in , bool addition)  {
+   pair<size_t, size_t> index_finder_for_add_delete(InputIterator in , bool addition, string kmer)  {
 
        auto ref = in;
        auto c = 0;
-       c = (addition) ?  0 : *in++;
+       bool new_node = false;
+       if (addition && index(kmer.substr(0,k-1).begin() ,0) != 1){
+       c = 0;
+       new_node = true;}
+       else c = *in++;
+
        symbol_type first_symbol = _encode_symbol(c);
 
           // Range is from first edge of first, to last edge of last
@@ -749,6 +754,7 @@ public:
    	     symbol_type x = _encode_symbol(c);
 
 
+
 	 // update range; Within current range, find first and last occurence of c or c-
 	 // first -> succ(x, first)
 	 for (uint8_t y=x<<1; y<(x<<1)+1; y++) {
@@ -756,10 +762,14 @@ public:
 	    size_t tmpRank = p_edges->rank(start, y);
 	    if (tmpRank < p_edges->rank(p_edges->size(), y))
 	       first = p_edges->select(tmpRank, y);
+
          if (start <= first && first <= end)  break;
         }
-          if (!(start <= first && first <= end))
-                return (std::make_pair(start,i));
+          if (!(start <= first && first <= end)){
+            if (new_node) return (std::make_pair(start,i));
+            else return (std::make_pair(start,i+1));
+              }
+
 
 
 	 if (start == end) {
@@ -778,7 +788,7 @@ public:
 	 start = _forward(first, x);
 	 end   = _forward(last, x);
    end   = _last_edge_of_node(_edge_to_node(end));
- //cout<<"start "<<start<<" label"<<edge_label(start)<<" first"<<edge_label(first)<<endl;
+
         }
 
       return (std::make_pair(first,k)); //edge is present
