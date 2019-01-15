@@ -735,9 +735,8 @@ public:
        auto ref = in;
        auto c = 0;
        bool new_node = false;
-       if (addition && index(kmer.substr(0,k-1).begin() ,0) != 1){
-       c = 0;
-       new_node = true;}
+       if (addition && index(kmer.substr(0,k-1).begin() ,0) != 1)
+          new_node = true;
        else c = *in++;
 
        symbol_type first_symbol = _encode_symbol(c);
