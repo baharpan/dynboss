@@ -13,30 +13,30 @@ Dsk = "/home/alan/exp/bio/dsk/dsk-1.6906/dsk"
 CosmoPack = "../cosmo-pack"
 CosmoBuild = "../cosmo-build"
 CosmoBuildDyn= "../cosmo-build-dyn"
-#CosmoAddRemove= "../cosmo-add-delete"
-CosmoAddRemove= "../cosmo-delete-add"
+CosmoAddRemove= "../cosmo-add-delete"
+#CosmoAddRemove= "../cosmo-delete-add"
 #CosmoQuery = "/home/alan/exp/bio/cosmoBowe/cosmo-query"
 OutFile = "./cmpResultsCosmoBowe.txt"
 
 fnamebase=sys.argv[1];
 fileFasta= fnamebase + ".fasta"
-call([Dsk, fileFasta , "27"]);
+call([Dsk, fileFasta , "4"]);
 fileKmer= fnamebase + ".solid_kmers_binary";
 filePacked= fnamebase + ".solid_kmers_binary.packed";
 call([ CosmoPack, fileKmer ]);
 start = time.time();
-call([ CosmoBuild, filePacked ]);
+call([ CosmoBuildDyn, filePacked ]);
 end = time.time();
 timeCosmo = end - start;
 print timeCosmo, " s";
-fileDbg= fnamebase + ".solid_kmers_binary.packed.dbg";
-statinfo = os.stat( fileDbg );
-print statinfo.st_size / 1024.0 / 1024.0
-start = time.time();
-call([ CosmoAddRemove, filePacked ] );
-end = time.time();
-timeCosmoDyn = end - start;
-print timeCosmoDyn, " s";
-statinfo = os.stat( fileDbg );
-print statinfo.st_size / 1024.0 / 1024.0
+# fileDbg= fnamebase + ".solid_kmers_binary.packed.dbg";
+# statinfo = os.stat( fileDbg );
+# print statinfo.st_size / 1024.0 / 1024.0
+# start = time.time();
+# call([ CosmoAddRemove, filePacked ] );
+# end = time.time();
+# timeCosmoDyn = end - start;
+# print timeCosmoDyn, " s";
+# statinfo = os.stat( fileDbg );
+# print statinfo.st_size / 1024.0 / 1024.0
 

@@ -21,6 +21,30 @@
 using namespace std;
 using namespace sdsl;
 
+void rev_complement_string ( std::string& in, std::string& out ) {
+   out = in;
+   size_t n = in.size();
+   for (size_t i = 0 ; i < n; ++i) {
+      char c;
+      switch( in[ n - 1 - i ] ) {
+      case 'A':
+	 c = 'T';
+	 break;
+      case 'C':
+	 c = 'G';
+	 break;
+      case 'G':
+	 c = 'C';
+	 break;
+      case 'T':
+	 c = 'A';
+	 break;
+      }
+
+      out[i] = c;
+   }
+}
+
 class dyn_boss {
 public:
 
@@ -32,7 +56,8 @@ public:
    size_t           k;
    dyn::gap_bv* p_node_flags;
    //dyn::suc_bv* p_node_flags;
-   dyn::wt_str* p_edges;
+   //dyn::wt_str* p_edges;
+   dyn::str_check* p_edges;
 
    array<size_t, 1 + sigma> m_symbol_ends;
    array<size_t, 1 + sigma> m_edge_max_ranks;
@@ -49,7 +74,8 @@ public:
 
    dyn_boss( size_t in_k,
 	     dyn::gap_bv* node_flags,
-	     dyn::wt_str* edges,
+	     //dyn::wt_str* edges,
+	     dyn::str_check* edges,
 	     array<size_t, 1 + sigma>& symbol_ends,
 	     string alphabet) :
       k( in_k ),
@@ -90,12 +116,6 @@ public:
       input.read((char*)&k, sizeof(uint64_t));
 
       size_t num_edges = counts[sigma];
-#ifndef NDEBUG
-      cerr << "counts\n";
-      for (size_t i = 0; i <= sigma; ++i) {
-	 cerr << i << ' ' << counts[i] << endl;
-      }
-#endif
 
       size_t num_blocks = size_t(size)/sizeof(uint64_t) - (sigma+2);
       input.seekg(0, ios::beg); // rewind
@@ -108,7 +128,7 @@ public:
 
       // would be nice to fix wavelet trees so the constructor
       // can accept a int_vector<4> instead (which is all we need for DNA)
-      p_edges = new dyn::wt_str( 10 );
+      p_edges = new dyn::str_check; //new dyn::wt_str( 10 );
       //p_edges = new dyn::wt_str( 5 );
       //p_edges = NULL;
 
@@ -163,16 +183,22 @@ public:
       // find first predecessor edge i->j
       size_t j = _node_to_edge(v);
 
+      
+      
       // edge label has to be the last node symbol of v
       symbol_type x = _symbol_access(j);
 
       if (x == 0) return 0;
+
+
+      //cerr << "Indegree from edge " << j << ' ' << num_edges() << endl;
       size_t i_first = _backward(j);
 
       size_t i_last = _next_edge(i_first, x);
-      if (i_last = num_edges()) i_last = i_first; //Bahar
+      //if (i_last == num_edges()) i_last = i_first; //Bahar
+      if (i_last == num_edges()) i_last = num_edges() - 1; //Bahar
       return p_edges->rank(i_last, _with_edge_flag(x, true)) -
-      p_edges->rank(i_first, _with_edge_flag(x, true)) + 1;
+	 p_edges->rank(i_first, _with_edge_flag(x, true)) + 1;
    }
 
    // The signed return type is worrying, since it halves the possible answers...
@@ -293,6 +319,30 @@ public:
    size_t num_edges() const { return m_symbol_ends[sigma]; /*_node_flags.size();*/ }
    size_t num_nodes() const { return m_num_nodes; /*m_node_rank(num_edges());*/ }
 
+   void print_boss_matrix( std::ostream& os ) {
+      for (size_t i = 0; i < num_edges(); ++i) {
+	 os << edge_label(i) << ' ';
+	 //os << static_cast<char>(_map_symbol(_strip_edge_flag( p_edges->at(i) ))) << ' ';
+	 //os << static_cast<char>(_map_symbol(( p_edges->at(i) ))) << ' ';
+	 // switch (p_edges->at(i)) {
+	 // default:
+	 os << p_edges->at(i) << ' ';
+
+	 // }
+
+	 os << p_node_flags->at(i);
+
+	 // if (p_node_flags->at(i) == 0) {
+	 //    size_t j = _edge_to_node( i );
+	 //    os << ' ' << node_label( j ) << ' '
+	 //       << ' ' << indegree( j ) << ' ';
+	 // }
+
+	 os << '\n';
+      }
+
+   }
+   
 private:
    size_t _symbol_start(symbol_type x) const {
       assert(x < sigma + 1);
@@ -361,6 +411,7 @@ public:
 	 if (x == 0) return label;
 	 i = _backward(i);
       }
+      
       return label;
    }
 
@@ -406,13 +457,17 @@ public:
 
 
    size_t _backward(size_t i) {
+      //cerr << "bwd start\n";
       assert(i < num_edges());
       symbol_type x  = _symbol_access(i);
       // This handles x = $ so that we have the all-$ edge at position 0
       // but probably shouldn't be called this way in the normal case
       size_t x_start = _symbol_start(x);
       // rank is over [0,i) and select is 1-based
+      //cerr << "x_start: " << x_start << ", i: " << i << endl;
       size_t nth = _rank_distance(x_start+1, i+1);
+
+      //cerr << "nth: " << nth << endl;
       if (x == 0) return 0;
       // no minus flag because we want the FIRST
       return p_edges->select(nth, _with_edge_flag(x, false));
@@ -455,29 +510,29 @@ public:
       return last-1;
    }
 
-   size_t serialize( ostream& out ) {
-      size_t w_bytes = 0;
-      out.write((char*)&k,sizeof(k));
-      w_bytes += sizeof(k);
-      w_bytes += p_node_flags->serialize( out );
-      w_bytes += p_edges->serialize( out );
-      for (size_t i = 0; i < sigma+1; ++i) {
-	 out.write( (char*)(&(m_symbol_ends[i])), sizeof(size_t) );
-	 w_bytes += sizeof(size_t);
-      }
-      for (size_t i = 0; i < sigma+1; ++i) {
-	 out.write( (char*)(&(m_edge_max_ranks[i])), sizeof(size_t) );
-	 w_bytes += sizeof(size_t);
-      }
-      size_t asize = m_alphabet.size();
-      out.write( (char*)&asize, sizeof(size_t));
-      w_bytes += sizeof(size_t);
-      out.write( m_alphabet.c_str() , m_alphabet.size() );
-      w_bytes += m_alphabet.size();
-      out.write( (char*)&m_num_nodes, sizeof(size_t));
-      w_bytes += sizeof(size_t);
-      return w_bytes;
-   }
+   // size_t serialize( ostream& out ) {
+   //    size_t w_bytes = 0;
+   //    out.write((char*)&k,sizeof(k));
+   //    w_bytes += sizeof(k);
+   //    w_bytes += p_node_flags->serialize( out );
+   //    w_bytes += p_edges->serialize( out );
+   //    for (size_t i = 0; i < sigma+1; ++i) {
+   // 	 out.write( (char*)(&(m_symbol_ends[i])), sizeof(size_t) );
+   // 	 w_bytes += sizeof(size_t);
+   //    }
+   //    for (size_t i = 0; i < sigma+1; ++i) {
+   // 	 out.write( (char*)(&(m_edge_max_ranks[i])), sizeof(size_t) );
+   // 	 w_bytes += sizeof(size_t);
+   //    }
+   //    size_t asize = m_alphabet.size();
+   //    out.write( (char*)&asize, sizeof(size_t));
+   //    w_bytes += sizeof(size_t);
+   //    out.write( m_alphabet.c_str() , m_alphabet.size() );
+   //    w_bytes += m_alphabet.size();
+   //    out.write( (char*)&m_num_nodes, sizeof(size_t));
+   //    w_bytes += sizeof(size_t);
+   //    return w_bytes;
+   // }
 
    size_t size() const { return num_edges(); }
 
@@ -485,192 +540,302 @@ public:
       return lower_bound(m_alphabet.begin(), m_alphabet.end(), c) - m_alphabet.begin();
    }
 
-  void delete_edge(size_t start , string kmer){
-      size_t in = indegree(_edge_to_node(_forward(start)));
+   //This function deletes an edge kmer at position pos
+   //
+   // It may leave the graph in an inconsistent state,
+   // (all nodes may not have incoming edge, etc.),
+   // so use carefully and maintain the graph state externally.
+   void delete_edge_refactor( size_t pos, string kmer ) {
+      //First, check if this is first edge of multi-edge node
+      //If so, the node flag of the next edge must be updated
+      size_t node_decrement = 1; //did we remove a node?
+      if (pos < num_edges() - 1) {
+	 if (p_node_flags->at( pos ) == 0) { //first of node
+	    if (p_node_flags->at(pos + 1)) { //second belongs to same node
+	       p_node_flags->remove( pos + 1 );
+	       p_node_flags->insert( pos + 1, 0 ); //second is now first after deletion at pos
+	       node_decrement = 0;
+	    } 
+	 } else {
+	    //not first of node
+	    node_decrement = 0;
+	 }
+      }
+
+      //Next, check if there is another edge incoming to the
+      //same target of the edge at pos.
+      //If this edge has a minus flag, may ignore, as the flag of this edge
+      //will not affect others
+      bool edge_flag = p_edges->at( pos ) & 1;
+      if (edge_flag) {
+	 //simply remove edge and node flags, and we're done
+	 //removal below
+	 
+      } else {
+	 //need to check if any other edges are incoming to the same target
+	 size_t rankPos = p_edges->rank( pos + 1, p_edges->at( pos ) );
+	 size_t rankSym = p_edges->rank( num_edges(), p_edges->at( pos ) );
+	 symbol_type xminus = p_edges->at( pos ) | 1;
+	 if ( rankPos < rankSym ) {
+	    //need to check for minuses between this occurrence and the next
+	    size_t nextPos = p_edges->select( rankPos, p_edges->at( pos ) );
+	    
+	    size_t rankMinusPos = p_edges->rank( pos + 1, xminus );
+	    size_t rankMinusNextPos = p_edges->rank( nextPos + 1, xminus );
+	    if (rankMinusNextPos > rankMinusPos) {
+	       //sure enough, we've found one. Let's change the first one
+	       //to be not minused.
+	       size_t posMinus = p_edges->select( rankMinusPos, xminus );
+	       p_edges->remove( posMinus );
+	       p_edges->insert( posMinus, p_edges->at( pos ) );
+	    }
+	 } else {
+	    //need to check for minuses after this occurrence
+	    size_t rankMinusPos = p_edges->rank( pos + 1, xminus );
+	    size_t rankMinusNextPos = p_edges->rank( num_edges(), xminus );
+	    if (rankMinusNextPos > rankMinusPos) {
+	       //sure enough, we've found one. Let's change the first one
+	       //to be not minused.
+	       size_t posMinus = p_edges->select( rankMinusPos, xminus );
+	       p_edges->remove( posMinus );
+	       p_edges->insert( posMinus, p_edges->at( pos ) );
+	    }
+	 }
+	 //Minuses should be handled now, we can safely remove and return
+
+      }
+
+      symbol_type val =  _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);p_edges->at( pos ) >> 1;
+      
+      p_edges->remove( pos );
+      p_node_flags->remove( pos );
+      
+      //Need to update the number of characters and nodes
+      m_num_nodes -= node_decrement;
+      for (symbol_type i = 0; i < sigma+1; ++i){
+	 if ( i >= val){
+	    --m_symbol_ends[i];
+	 }
+      }
+   }
+   
+   void delete_edge(size_t start , string kmer){
+
       size_t out = outdegree(_edge_to_node(start));
+      
+      if (out == 0) {
+      	 
+      	 //Will assume user is not calling
+      	 //this if this node has an incoming edge
+      	 size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
+      	 cerr << "removing edge... (start = " << start << ")\n";
+      	 p_edges->remove(start);
+      	 cerr << "removing node flag...\n";
+      	 p_node_flags->remove(start);
+      	 cerr << "done.\n";
+	 
+      	 for (symbol_type i = 0; i < sigma+1; ++i){
+      	    if ( i >= to_be_decreased){
+      	       m_symbol_ends[i]--;
+
+      	    }
+      	 }
+      	 m_num_nodes-=1;
+      	 cerr << "returning\n";
+      	 return;
+      }
+
+      size_t in = indegree(_edge_to_node(_forward(start)));
+
       size_t forward_index = _forward(start);
       size_t forward_lab = (*p_edges)[_forward(start)];
       size_t forward_to_be_decreased = _encode_symbol(kmer[k-1]);//(*p_edges)[start]/2;//_encode_symbol(edge_label(_forward(start))[k-2]);
-
+      
       if (in > 1 && out > 1){
+	 size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
+	 p_edges->remove(start);
+	 for (symbol_type i = 0; i < sigma+1; ++i){
+	    if ( i >= to_be_decreased){
+	       m_symbol_ends[i]--;
 
-          size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
-          p_edges->remove(start);
-          for (symbol_type i = 0; i < sigma+1; ++i){
-              if ( i >= to_be_decreased){
-                  m_symbol_ends[i]--;
+	    }
+	 }
+	 size_t next_incoming_edge = start+ outdegree(_edge_to_node(start))-1;
+	 size_t lab_edge = (*p_edges)[next_incoming_edge];
+	 if (lab_edge % 2 == 1){
 
-              }
-          }
-          size_t next_incoming_edge = start+ outdegree(_edge_to_node(start))-1;
-          size_t lab_edge = (*p_edges)[next_incoming_edge];
-          if (lab_edge % 2 == 1){
+	    p_edges->remove(next_incoming_edge);
+	    p_edges->insert(next_incoming_edge,lab_edge-1);
 
-                  p_edges->remove(next_incoming_edge);
-                  p_edges->insert(next_incoming_edge,lab_edge-1);
+	 }
 
-                 }
-
-          if ((*p_node_flags)[start] == 0){
-              p_node_flags->remove(start+1);
-              }
-              else{
-                  p_node_flags->remove(start);
-              }
-        }
+	 if ((*p_node_flags)[start] == 0){
+	    p_node_flags->remove(start+1);
+	 }
+	 else{
+	    p_node_flags->remove(start);
+	 }
+      }
       else{
-            if (out == 1 && in == 1){
+	 if (out == 1 && in == 1){
 
 
-          p_edges->remove(start);   //for removing any edge with outdegree 1
-          p_edges->insert(start,0);
-      }
+	    p_edges->remove(start);   //for removing any edge with outdegree 1
+	    p_edges->insert(start, 0 );
+	 }
 
 
+	 if (in > 1){
 
-          if (in > 1){
+	    //size_t next_incoming_edge = start+ outdegree(_edge_to_node(start));
+	    symbol_type xx = _strip_edge_flag( p_edges->at( start ) ) << 1;
+	    cerr << "xx: " << xx  <<  ", start: " << p_edges->at(start) << endl;
+	    if (xx == p_edges->at( start ) ) {
+	       symbol_type xplus = xx | 1;
+	       size_t next_incoming_edge = p_edges->select( p_edges->rank( start, xplus ) , xplus );
+	       symbol_type lab_edge = (*p_edges)[next_incoming_edge];
+	       cerr << "lab_edge: " << next_incoming_edge << ' ' << lab_edge << endl;
+	       p_edges->remove(next_incoming_edge);
+	       p_edges->insert(next_incoming_edge, xx);
+	       
+	    }
+	    
+	    p_edges->remove(start);
+	    p_edges->insert(start,0);
 
-              size_t next_incoming_edge = start+ outdegree(_edge_to_node(start));
-              p_edges->remove(start);
-              p_edges->insert(start,0);
-
-              size_t lab_edge = (*p_edges)[next_incoming_edge];
-              if (lab_edge % 2 == 1){
-
-                  p_edges->remove(next_incoming_edge);
-                  p_edges->insert(next_incoming_edge,lab_edge-1);
-              }
-          }
+	 }
 
 
-          if (out >  1 ) {
+	 if (out >  1 ) {
 
-              size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
+	    size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
 
-               p_edges->remove(start);
-               for (symbol_type i = 0; i < sigma+1; ++i){
+	    p_edges->remove(start);
+	    for (symbol_type i = 0; i < sigma+1; ++i){
                if ( i >= to_be_decreased){
-               m_symbol_ends[i]--;
+		  m_symbol_ends[i]--;
                }
-               }
+	    }
 
-              if ((*p_node_flags)[start] == 0)
-                  p_node_flags->remove(start+1);
+	    if ((*p_node_flags)[start] == 0)
+	       p_node_flags->remove(start+1);
 
-              else
-                  p_node_flags->remove(start);
-
-
-      }
-
-            if (in == 1 && forward_lab == 0){ //only for removing last edge of a read
-
-                if (out > 1 && start < forward_index){
-                  p_edges->remove(forward_index - 1);
-                  p_node_flags->remove(forward_index - 1);
-                }
-                else{
-                  p_edges->remove(forward_index);
-                  p_node_flags->remove(forward_index);
-                }
-              for (symbol_type i = 0; i < sigma+1; ++i){
-                  if ( i >= forward_to_be_decreased ){
-                      m_symbol_ends[i]--;
-                  }
-              }
-              m_num_nodes-=1;
-          }
-
-      }
-
-  }
+	    else
+	       p_node_flags->remove(start);
 
 
-  size_t add(size_t start, symbol_type x ,string  kmer, bool last_node){
+	 }
 
-  if (start == 0){
-	   for (size_t m = 0; m <4; ++m){
-	      if (edge_label(m) == string(k-1, '$')+kmer[k-1])
-		      return start;
+	 if (in == 1 && forward_lab == 0){ //only for removing last edge of a read
+
+	    if (out > 1 && start < forward_index){
+	       p_edges->remove(forward_index - 1);
+	       p_node_flags->remove(forward_index - 1);
+	    }
+	    else{
+	       cerr << "HERE\n";
+	       p_edges->remove(forward_index);
+	       p_node_flags->remove(forward_index);
+	       
+	    }
+	    for (symbol_type i = 0; i < sigma+1; ++i){
+	       if ( i >= forward_to_be_decreased ){
+		  m_symbol_ends[i]--;
 	       }
-	}
+	    }
+	    m_num_nodes-=1;
+	 }
+
+      }
+
+   }
+
+
+   size_t add(size_t start, symbol_type x ,string  kmer, bool last_node){
+
+      if (start == 0){
+	 for (size_t m = 0; m <4; ++m){
+	    if (edge_label(m) == string(k-1, '$')+kmer[k-1])
+	       return start;
+	 }
+      }
 
       bool last_node_present = false;
       size_t check;
 
       if (last_node){
-          if (index(kmer.substr(1).begin(),0) == 1) {
+	 if (index(kmer.substr(1).begin(),0) == 1) {
             last_node_present = true;
             size_t i_last  = _next_edge(start, _encode_symbol(kmer[k-1]));
             check = (i_last == num_edges() || i_last - start >= 4) ? 0 : i_last - start;
 
-        }
+	 }
       }
 
       size_t to_be_increased = _encode_symbol(kmer[k-2]);//_encode_symbol(edge_label(start)[k-2]);
       size_t ins = 2*x;
       int outdeg = -1;
-        if (ins > (*p_edges)[start]){
-          outdeg = outdegree (_edge_to_node(start));
-          if (outdeg == 0) { //outgoing dummy
+      if (ins > (*p_edges)[start]){
+	 outdeg = outdegree (_edge_to_node(start));
+	 if (outdeg == 0) { //outgoing dummy
             p_edges->remove(start);
             p_edges->insert(start,ins);
-          }
-          else {
-              size_t i = 1;
-              for (i = 1; i < outdeg; ++i){
-                  if (ins < (*p_edges)[start+i])
-                      break;
-                    }
-              start += i;
-              p_edges->insert(start,ins);
-              p_node_flags->insert(start,1);
-          }
+	 }
+	 else {
+	    size_t i = 1;
+	    for (i = 1; i < outdeg; ++i){
+	       if (ins < (*p_edges)[start+i])
+		  break;
+	    }
+	    start += i;
+	    p_edges->insert(start,ins);
+	    p_node_flags->insert(start,1);
+	 }
 
-     }
-     else{
+      }
+      else{
          if ((*p_edges)[start] != ins){
-             p_edges->insert(start,ins);
-             p_node_flags->insert(start+1,1);
-       }
-     }
-
-
-      for (symbol_type i = 0; i < sigma+1; ++i){
-          if (outdeg != 0 && i >= to_be_increased){
-              m_symbol_ends[i]++;
-          }
+	    p_edges->insert(start,ins);
+	    p_node_flags->insert(start+1,1);
+	 }
       }
 
 
-    int d_insertion = -1;
+      for (symbol_type i = 0; i < sigma+1; ++i){
+	 if (outdeg != 0 && i >= to_be_increased){
+	    m_symbol_ends[i]++;
+	 }
+      }
 
-    if (!last_node_present) d_insertion = _forward(start);
+
+      int d_insertion = -1;
+
+      if (!last_node_present) d_insertion = _forward(start);
 
 
 
-    if (d_insertion != -1){ //destination node is not present
-     p_edges->insert(d_insertion , 0);
-     p_node_flags->insert(d_insertion , 0);
-     m_num_nodes++;
+      if (d_insertion != -1){ //destination node is not present
+	 p_edges->insert(d_insertion , 0);
+	 p_node_flags->insert(d_insertion , 0);
+	 m_num_nodes++;
 
-    }
-    //make the inderee > 1
-    else {
-        p_edges->remove(start+check);
-        p_edges->insert(start+check,ins+1);
-    }
+      }
+      //make the inderee > 1
+      else {
+	 p_edges->remove(start+check);
+	 p_edges->insert(start+check,ins+1);
+      }
       if (start >= d_insertion)
-          start++;
+	 start++;
       for (symbol_type i = 0; i < sigma+1; ++i){
 
-          if (d_insertion != -1 && i >= x){
-              m_symbol_ends[i]++;
-          }
-   }
+	 if (d_insertion != -1 && i >= x){
+	    m_symbol_ends[i]++;
+	 }
+      }
 
       return start;
-    }
+   }
 
    template <class InputIterator>
    bool index(InputIterator in , bool edge)  {
@@ -730,28 +895,26 @@ public:
    template <class InputIterator>
 
    pair<size_t, size_t> index_finder_for_add_delete(InputIterator in , bool addition, string kmer)  {
+      cerr << "Finding " << kmer << endl;
+      auto ref = in;
+      auto c = 0;
+      bool new_node = false;
+      if (addition && index(kmer.substr(0,k-1).begin() ,0) != 1)
+	 new_node = true;
+      else c = *in++;
 
-       auto ref = in;
-       auto c = 0;
-       bool new_node = false;
-       if (addition && index(kmer.substr(0,k-1).begin() ,0) != 1)
-          new_node = true;
-       else c = *in++;
+      symbol_type first_symbol = _encode_symbol(c);
 
-       symbol_type first_symbol = _encode_symbol(c);
-
-          // Range is from first edge of first, to last edge of last
-        size_t start = _symbol_start(first_symbol);
-        size_t end   = m_symbol_ends[first_symbol]-1;
-        size_t first=0, last = 0;
+      // Range is from first edge of first, to last edge of last
+      size_t start = _symbol_start(first_symbol);
+      size_t end   = m_symbol_ends[first_symbol]-1;
+      size_t first=0, last = 0;
 
       // find c labeled pred edge
       // if outside of range, find c- labeled pred edge
       for (size_t i = 0; i < k-1 ; i++) { //I changed k (addition) to k-1 for deletion
-	       c = *in++;
-   	     symbol_type x = _encode_symbol(c);
-
-
+	 c = *in++;
+	 symbol_type x = _encode_symbol(c);
 
 	 // update range; Within current range, find first and last occurence of c or c-
 	 // first -> succ(x, first)
@@ -761,12 +924,12 @@ public:
 	    if (tmpRank < p_edges->rank(p_edges->size(), y))
 	       first = p_edges->select(tmpRank, y);
 
-         if (start <= first && first <= end)  break;
-        }
-          if (!(start <= first && first <= end)){
+	    if (start <= first && first <= end)  break;
+	 }
+	 if (!(start <= first && first <= end)){
             if (new_node) return (std::make_pair(start,i));
             else return (std::make_pair(start,i+1));
-              }
+	 }
 
 
 
@@ -785,9 +948,9 @@ public:
 	 }
 	 start = _forward(first, x);
 	 end   = _forward(last, x);
-   end   = _last_edge_of_node(_edge_to_node(end));
+	 end   = _last_edge_of_node(_edge_to_node(end));
 
-        }
+      }
 
       return (std::make_pair(first,k)); //edge is present
    }
@@ -807,60 +970,157 @@ public:
    }
 };
 
-dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition){
-    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin() , 1,kmer);
+dyn_boss Add_Edge (dyn_boss dbg,  std::string kmer, bool addition, size_t depth = 0){
+    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(kmer.begin(), true ,kmer);
+
+    cout << "Adding " << kmer << endl;
+    
     size_t start = start_and_position.first;
     size_t pos = start_and_position.second;
     vector<size_t> to_add;
 	  //pos = (addition == 1) ? pos+1 : pos;
     for (size_t i = pos; i < kmer.size(); i++) {
-        if (kmer[i]!= '$')
-        to_add.push_back (dbg._encode_symbol(kmer[i]));
+       if (kmer[i]!= '$') {
+	  to_add.push_back (dbg._encode_symbol(kmer[i]));
+       }
     }
-
-
 
     size_t i = 0;
 
-    while (i < to_add.size()){
+    while (i < to_add.size()) {
         kmer = (i == 0) ? dbg.node_label(dbg._edge_to_node(start)) += dbg._map_symbol(to_add[i]) : kmer.substr(1) += dbg._map_symbol(to_add[i]);
-        start = (i == to_add.size()-1) ? dbg.add(start,to_add[i],kmer, 1) : dbg.add(start,to_add[i],kmer, 0);
+	// if (i == to_add.size() - 1 ) {
+	//    start = dbg.add(start,to_add[i], kmer, 1);
+	// }
+	// else {
+	//    start = dbg.add(start,to_add[i], kmer, 0);
+	// }
+	start = (i == to_add.size()-1) ? dbg.add(start,to_add[i],kmer, 1) : dbg.add(start,to_add[i],kmer, 0);
         start = dbg._forward(start);
         i++;
     }
 
-
-
+       
+        
     //If added edge is now at the begining of a read, we should delete the dummies
     //of former first edge of the read (only if their outdegree is 1)
 
     string incoming_dummy = '$'+ kmer.substr(1);
 
-    //start is replaced with _forward(start) already at the final step of addition, so to check the indegree "dbg.indegree(dbg._edge_to_node(start))" is correct.
+    // //start is replaced with _forward(start) already at the final step of addition, so to check the indegree "dbg.indegree(dbg._edge_to_node(start))" is correct.
+  
+    // if (addition && dbg.indegree(dbg._edge_to_node(start)) > 1){
+    //    cerr << "Beginning dummy removal process...\n";
+    //    dbg.print_boss_matrix( cerr );
+    //    pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0, incoming_dummy);
+    //    size_t start = start_and_position.first;
+    //    size_t pos = start_and_position.second;
+    //    if (pos == dbg.k){
+	    
+    // 	  size_t i = 0;
+    // 	  bool right_place = true; //always start < ref because $A is before AA
+    // 	  while ( i < dbg.k){
+    // 	     cerr << "Found dummy at " << start << " with label " << dbg.edge_label( start ) << endl;
+    // 	     size_t out = dbg.outdegree(dbg._edge_to_node(start));
+    // 	     cerr << "Deleting dummy " << incoming_dummy << "..." << endl;
+    // 	     dbg.delete_edge_refactor(start,incoming_dummy);
+
+    // 	     if (i == dbg.k - 1)
+    // 		break;
+	     
+    // 	     for (size_t i = 0; i < dbg.p_edges->size(); ++i) {
+    // 		cerr << dbg.p_edges->at(i);
+    // 	     }
+    // 	     cerr << '\n';
+    // 	     dbg.print_boss_matrix( cerr );
+	     
+    // 	     if (out > 1 ) break;
+    // 	     size_t backward_edge;
+    // 	     start = (right_place) ? start : start-1; //because one edge before start is already deleted
+    // 	     backward_edge = dbg._backward(start);
+    // 	     right_place = (backward_edge >= start) ?  false : true;
+    // 	     start = backward_edge;
+    // 	     incoming_dummy = '$' + incoming_dummy.substr(0,dbg.k-1);
+    // 	     i++;
+	     
+    // 	  }
+    //    }
+
+    vector< size_t > vDelete;
+    vector< string > vEdgesToDelete;
+    
     if (addition && dbg.indegree(dbg._edge_to_node(start)) > 1){
-        pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0, incoming_dummy);
-        size_t start = start_and_position.first;
-        size_t pos = start_and_position.second;
-        if (pos == dbg.k){
-        size_t i = 0;
-        bool right_place = true; //always start < ref because $A is before AA
+       cerr << "Beginning dummy removal process...\n";
+       dbg.print_boss_matrix( cerr );
+       pair<size_t, size_t> start_and_position = dbg.index_finder_for_add_delete(incoming_dummy.begin() , 0, incoming_dummy);
+       size_t start = start_and_position.first;
+       size_t pos = start_and_position.second;
+       if (pos == dbg.k){
+	  size_t i = 0;
+	  while ( i < dbg.k - 1){
+	     cerr << "Found dummy at " << start << " with label " << dbg.edge_label( start ) << endl;
+	     size_t out = dbg.outdegree(dbg._edge_to_node(start));
+	     
+	     cerr << "Deleting dummy " << incoming_dummy << "..." << endl;
+	     //dbg.delete_edge_refactor(start,incoming_dummy);
 
-        while ( i < dbg.k){
-            size_t out = dbg.outdegree(dbg._edge_to_node(start));
-            dbg.delete_edge(start,incoming_dummy);
-            if (out > 1 ) break;
-            size_t backward_edge;
-            start = (right_place) ? start : start-1; //because one edge before start is already deleted
-            backward_edge = dbg._backward(start);
-            right_place = (backward_edge >= start) ?  false : true;
-            start = backward_edge;
-            incoming_dummy = '$' + incoming_dummy.substr(0,dbg.k-1);
-            i++;
+	     //insert to maintain increasing order
+	     vector<size_t>::iterator itPos = vDelete.begin();
+	     size_t posDelete = 0;
+	     while ( itPos != vDelete.end() ) {
+		if ( (*itPos) < start ) {
+		   ++itPos;
+		   ++posDelete;
+		} else {
+		   break;
+		}
+	     }
+	     
+	     vDelete.insert( itPos, start );
+	     vEdgesToDelete.insert( (vEdgesToDelete.begin() + posDelete),
+				    incoming_dummy );
+	     
+	     if (i == dbg.k - 1)
+		break;
+	     
+	     if (out > 1 ) break;
+	     size_t backward_edge;
+	     start = dbg._backward(start);
+	     
+	     incoming_dummy = '$' + incoming_dummy.substr(0,dbg.k-1);
+	     i++;
+	     
+	  }
+       }
 
-          }
-        }
+       cerr << "Beginning deletion of positions:\n";
+       for (size_t i = 0; i < vDelete.size(); ++i) {
+	  cerr << vDelete[i] << ' ';
+       }
+       cerr << endl;
+
+       for (size_t i = 0; i < vDelete.size(); ++i) {
+	  dbg.delete_edge_refactor( vDelete[i] - i, vEdgesToDelete[i] );
+
+	  for (size_t j = 0; j < dbg.num_edges(); ++j) {
+	     cerr << dbg.p_edges->at(j);
+	  }
+	  cerr << '\n';
+       }
+
+       
     }
 
+
+    #ifdef ADD_REVCOMPS
+    if (depth == 0) {
+       string revcomp;
+       rev_complement_string( kmer, revcomp );
+       cout << "Adding revcomp " << revcomp << endl;
+       dbg = Add_Edge( dbg, revcomp, true, 1 );
+    }
+    #endif
+    
     return (dbg);
 }
 

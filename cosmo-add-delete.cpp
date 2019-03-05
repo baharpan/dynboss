@@ -24,14 +24,20 @@ static char base[] = {'$','A','C','G','T'};
 string extension = ".dbg";
 
 struct parameters_t {
-  std::string input_filename = "";
-  std::string output_prefix = "";
+   std::string input_filename = "";
+   std::string kmer_filename = "";
+   std::string input2_filename = "";
+   std::string output_prefix = "";
 };
 void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
-  TCLAP::CmdLine cmd("Cosmo Copyright (c) Alex Bowe (alexbowe.com) 2014", ' ', VERSION);
+   TCLAP::CmdLine cmd("Cosmo Copyright (c) Alex Bowe (alexbowe.com) 2014", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
+            ".packed edge file (output from pack-edges).", true, "", "input_file", cmd);
+  TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
+            "kmers to add in plain text. One per line.", true, "", "input_file", cmd);
+  TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("input2",
             ".packed edge file (output from pack-edges).", true, "", "input_file", cmd);
   string output_short_form = "output_prefix";
   TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
@@ -40,6 +46,7 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
   cmd.parse( argc, argv );
 
   params.input_filename  = input_filename_arg.getValue();
+  params.kmer_filename  = kmer_filename_arg.getValue();
   params.output_prefix   = output_prefix_arg.getValue();
 }
 
@@ -49,14 +56,16 @@ int main(int argc, char* argv[]) {
   parameters_t p;
   parse_arguments(argc, argv, p);
 
-    cerr << "Constructing dynamic BOSS..." << endl;
+  cerr << "Constructing dynamic BOSS..." << endl;
   ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
-    dyn_boss dbg;
-    dbg.load_from_packed_edges( input, "$ACGT" );
-    input.close();
-    cerr << "original graph: " << endl;
-    cerr << "k             : " << dbg.k << endl;
-    cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
+  ifstream inputKmers(p.kmer_filename, ios::in|ios::binary|ios::ate);
+
+  dyn_boss dbg;
+  dbg.load_from_packed_edges( input, "$ACGT" );
+  input.close();
+  cerr << "starting graph info: " << endl;
+  cerr << "k             : " << dbg.k << endl;
+  cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
     cerr << "num_edges()   : " << dbg.num_edges() << endl;
     size_t bs = dbg.bit_size();
     cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
@@ -65,38 +74,34 @@ int main(int argc, char* argv[]) {
 
 
     static const char alphanum[] = "ACGT";
+
     vector<string>all_kmers;
+
     int stringLength = sizeof(alphanum) - 1;
 
-    size_t nOps = 10000;
+    size_t nOps = 100;
     while (all_kmers.size() < nOps ){
         string kmer;
-        while(kmer.size() <dbg.k )
-            kmer += alphanum[rand() % stringLength];
-            all_kmers.push_back(kmer);
-          }
+        while(kmer.size() < dbg.k )
+	   kmer += alphanum[rand() % stringLength];
+	all_kmers.push_back(kmer);
+    }
 
-    cerr<<"number of kmers to process: "<<all_kmers.size()<<endl;
+    cerr<< "Number of kmers to add: " << all_kmers.size() << endl;
     clock_t t_start = clock();
     for (size_t i = 0; i< all_kmers.size();i++){
-      //if (dbg.index(all_kmers[i].begin(),0) == 0)
-        dbg = Add_Edge (dbg, all_kmers[i] ,1);
+       dbg = Add_Edge (dbg, all_kmers[i] ,1);
       /*if (dbg.index(all_kmers[i].begin(),0) == 0){
         cerr<<"failed to add kmer "<<i<<endl;
         exit(0);
       }*/
     }
     double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-    cerr<<"DONE with addition of all kmers\n";
+    cerr << "DONE with addition of all kmers\n";
     cerr << "Time per Op: " << t_elapsed / nOps << endl;
-    t_start = clock();
-    for (size_t i = 0; i< all_kmers.size();i++){
-       dbg = Delete_Edge (dbg, all_kmers[i]);
-       
-    }
+
     t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-    cerr << "DONE with deletion of all kmers\n";
-    cerr << "Time per Op: " << t_elapsed / nOps << endl;
+
     cerr << "===============================\n";
     cerr << "new greph     : " << endl;
     cerr << "k             : " << dbg.k << endl;

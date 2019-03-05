@@ -48,13 +48,9 @@ int main(int argc, char* argv[]) {
 
   ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
 
-#ifdef DYNAMIC
-cerr<<"here"<<endl;
   dyn_boss dbg;
   dbg.load_from_packed_edges( input, "$ACGT" );
-#else
-    debruijn_graph<> dbg = debruijn_graph<>::load_from_packed_edges(input, "$ACGT"/*, &minus_positions*/);
-#endif
+
   input.close();
 
   cerr << "k             : " << dbg.k << endl;
@@ -64,19 +60,21 @@ cerr<<"here"<<endl;
   cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
   cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
-  cout << "Edges: " << endl;
-  for (size_t i = 0; i < dbg.num_edges(); ++i) {
-     cout << dbg.edge_label(i) << endl;
-  }
-  cout << "Nodes: " << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); ++i) {
-     cout << dbg.node_label( i ) << endl;
-  }
+  dbg.print_boss_matrix( cout );
   
+  dbg = Add_Edge( dbg, "GTCG", true );
+  //dbg = Add_Edge( dbg, "GTCC", true );
+  //dbg = Add_Edge( dbg, "CGAC", true );
+  dbg = Add_Edge( dbg, "TCGT", true );
+  //dbg = Add_Edge( dbg, "ACGA", true );
+
+  cout << "After additions: " << endl;
+  
+  dbg.print_boss_matrix( cout );
   char * base_name = basename(const_cast<char*>(p.input_filename.c_str()));
   string outfilename = ((p.output_prefix == "")? base_name : p.output_prefix) + extension;
   //store_to_file(dbg, outfilename);
-  ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
-  dbg.serialize( ofs );
-  ofs.close();
+  //ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
+  //dbg.serialize( ofs );
+  //ofs.close();
 }

@@ -17,6 +17,7 @@
 #define DNA_ALPHA "acgt"
 #define DUMMY_SYM '$'
 
+
 // Swaps G (11 -> 10) and T (10 -> 11) representation so radix ordering is lexical
 // (needed because some kmer counters like DSK swap this representation, but we assume G < T
 // in our de bruijn graph implementation)
@@ -254,5 +255,7 @@ size_t node_lcs(const kmer_t & a, const kmer_t & b, size_t k) {
   ((uint64_t*)&y)[0] &= 0x3FFFFFFFFFFFFFFF;
   return lcs(x,y,k) - 1;
 }
+
+
 
 #endif
