@@ -2,7 +2,8 @@
 Dynamic succinct de Bruijn graph
 
 ## Dependencies
-sdsl-lite, which is available here.
+. sdsl-lite
+. DSK
 The remaining dependencies may be installed on a Debian-based system with the following commands.
 ```
 	sudo apt-get install libboost-dev
@@ -16,7 +17,7 @@ The remaining dependencies may be installed on a Debian-based system with the fo
 make cosmo-add-verify
 ```
 ## How to validate addition
-
+Update `test/runAddVerify.bash` to point to your binary for DSK.
 ## How to test
 ```
 #count the k-mers
