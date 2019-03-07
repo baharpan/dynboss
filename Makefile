@@ -14,7 +14,7 @@ NOPT_FLAGS=-Og
 DYN_FLAGS=-DDYNAMIC
 
 # Using Semantic Versioning: http://semver.org/
-VERSION=0.5.1
+VERSION=0.1.0
 CPP_FLAGS+=-DVERSION=\"$(VERSION)\"
 
 ifeq ($(dynamic),1)
