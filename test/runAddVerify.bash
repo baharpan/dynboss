@@ -9,15 +9,11 @@ k=24
 #OutFile = "./cmpResultsCosmoBowe.txt"
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <fastafile1base>"
+    echo "Usage: $0 <fastafile>"
     exit
 fi
    
-fnamebase="$1"
-fnamebase2="$2"
-
-fileFasta="${fnamebase}.fasta"
-fileFasta2="${fnamebase2}.fasta"
+fileFasta="$1"
 
 cmd="$dsk $fileFasta $k"
 echo $cmd
