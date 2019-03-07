@@ -17,7 +17,12 @@ The remaining dependencies may be installed on a Debian-based system with the fo
 make cosmo-add-verify
 ```
 ## How to validate addition
-Update `test/runAddVerify.bash` to point to your binary for DSK.
+```
+cd dsk-1.6906
+make
+cd ../test
+bash runAddVerify.bash yeast_1
+```
 ## How to test
 ```
 #count the k-mers
