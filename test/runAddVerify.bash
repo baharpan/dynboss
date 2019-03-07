@@ -1,19 +1,18 @@
 
-dsk="/home/alan/exp/bio/dsk/dsk-1.6906/dsk"
+dsk="../dsk-1.6906/dsk"
 CosmoPack="../cosmo-pack"
-CosmoBuild="../cosmo-build"
-CosmoBuildDyn="../cosmo-build-dyn"
 CosmoAddVerify="../cosmo-add-verify"
 k=24
 
 #OutFile = "./cmpResultsCosmoBowe.txt"
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <fastafile>"
+    echo "Usage: $0 <fastafilebase>"
     exit
 fi
-   
-fileFasta="$1"
+
+fnamebase="$1"
+fileFasta="$1.fasta"
 
 cmd="$dsk $fileFasta $k"
 echo $cmd
