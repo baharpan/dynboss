@@ -1,12 +1,23 @@
 # Dynamic BOSS
 Dynamic succinct de Bruijn graph
 
+## Dependencies
+sdsl-lite, which is available here.
+The remaining dependencies may be installed on a Debian-based system with the following commands.
+```
+	sudo apt-get install libboost-dev
+	sudo apt-get install libtclap-dev
+	
+```
+
 ## How to compile
 ```
-#change the paths on Makefile
-make DYNAMIC=1
+#change the paths on Makefile (although if sdsl-lite is installed to /usr/local/, this shouldn't be necessary.
+make cosmo-add-verify
 ```
-## How to run
+## How to validate addition
+
+## How to test
 ```
 #count the k-mers
 mkdir -p kmc_temp

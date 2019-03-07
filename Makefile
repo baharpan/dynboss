@@ -4,7 +4,7 @@ CXX=g++ # clang++-3.8 # g+
 CPP_FLAGS=-m64 -std=c++0x -Wall 
 DEP_PATH=/usr/local
 INC_PATH=$(DEP_PATH)/include
-INC_PATH_DYN=/home/alan/code/dynamic-nicola/include
+INC_PATH_DYN=./include/
 LIB_PATH=$(DEP_PATH)/lib
 DEP_FLAGS=-I$(INC_PATH)/ -I$(INC_PATH_DYN)/ -L$(LIB_PATH)/ -lsdsl # -ldivsufsort -ldivsufsort64
 DEBUG_FLAGS=-g
