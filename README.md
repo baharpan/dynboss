@@ -2,12 +2,11 @@
 Dynamic succinct de Bruijn graph
 
 ## Dependencies
-. sdsl-lite
-. DSK
-The remaining dependencies may be installed on a Debian-based system with the following commands.
+sdsl-lite, boost, and tclap.
+Boost and tclap may be installed on a Debian-based system with the following commands.
 ```
-	sudo apt-get install libboost-dev
-	sudo apt-get install libtclap-dev
+sudo apt-get install libboost-dev
+sudo apt-get install libtclap-dev
 	
 ```
 
