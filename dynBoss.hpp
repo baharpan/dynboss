@@ -56,8 +56,8 @@ public:
    size_t           k;
    dyn::gap_bv* p_node_flags;
    //dyn::suc_bv* p_node_flags;
-   //dyn::wt_str* p_edges;
-   dyn::str_check* p_edges;
+   dyn::wt_str* p_edges;
+   //dyn::str_check* p_edges;
 
    array<size_t, 1 + sigma> m_symbol_ends;
    array<size_t, 1 + sigma> m_edge_max_ranks;
@@ -74,7 +74,7 @@ public:
 
    dyn_boss( size_t in_k ) {
       p_node_flags = new dyn::gap_bv();
-      p_edges = new dyn::str_check();
+      p_edges = new dyn::wt_str( 10 );
       m_alphabet = "$ACGT";
       m_num_nodes = 0;
       k = in_k;
@@ -85,8 +85,7 @@ public:
 
    dyn_boss( size_t in_k,
 	     dyn::gap_bv* node_flags,
-	     //dyn::wt_str* edges,
-	     dyn::str_check* edges,
+	     dyn::wt_str* edges,
 	     array<size_t, 1 + sigma>& symbol_ends,
 	     string alphabet) :
       k( in_k ),
@@ -139,7 +138,7 @@ public:
 
       // would be nice to fix wavelet trees so the constructor
       // can accept a int_vector<4> instead (which is all we need for DNA)
-      p_edges = new dyn::str_check; //new dyn::wt_str( 10 );
+      p_edges = new dyn::wt_str( 10 );
       //p_edges = new dyn::wt_str( 5 );
       //p_edges = NULL;
 
@@ -580,110 +579,12 @@ public:
       return lower_bound(m_alphabet.begin(), m_alphabet.end(), c) - m_alphabet.begin();
    }
 
-   size_t add_edge_simple( size_t pos, symbol_type x, bool targetExists = false, size_t idxIncoming = 0 ) {
-      
-      bool edge_added = false;
-      if ( p_edges->at(pos) == 0 ) {
-	 p_edges->remove(pos);
-	 p_edges->insert(pos, x);
-	 //for (symbol_type i = 0; i < sigma+1; ++i){
-	 //--m_symbol_ends[i];
-	 //}
-      } else {
-
-	 //Find where within this node to insert the edge
-	 size_t startPos = pos;
-	 while (pos < num_edges()) {
-	    if (p_edges->at( pos ) < x) {
-	       ++pos;
-	       if (pos >= num_edges())
-		  break;
-	       if (p_node_flags->at(pos) == 0) {
-		  break;
-	       }
-	    } else {
-	       break;
-	    }
-	    
-
-	 }
-
-	 edge_added = true;
-
-	 p_edges->insert( pos, x );
-
-	 if (pos > startPos)
-	    p_node_flags->insert( pos, 1 );
-	 else
-	    p_node_flags->insert( pos + 1, 1 );
-
- 
-	 //update symbol counts
-	 symbol_type y = _symbol_access( startPos );
-
-	 for (symbol_type i = 0; i < sigma+1; ++i){
-	    if ( i >= (y)){
-	       ++m_symbol_ends[i];
-	    }
-	 }
-      }
-
-      
-
-      //need to check if target node exists. If not, need to add an
-      //empty edge to create it.
-      if (targetExists) {
-	 //need to determine if the newly added edge should have a minus flag.
-	 //if not, the idxIncoming needs to have a minux flag
-	 //this is decided simply by their relative order
-	 if (idxIncoming >= pos) {
-	    if (edge_added)
-	       ++idxIncoming; //a new edge has been added before it
-	    //and it needs to be replaced with a minus flag
-	    p_edges->remove( idxIncoming );
-	    p_edges->insert( idxIncoming, x | 1 ); //has the same symbol as the new edge at pos
-	 } else {
-	    
-	    p_edges->remove( pos );
-	    p_edges->insert( pos, x | 1 );
-	    
-	 }
-      } else {
-	 //target node does not exist
-	 //the position it should be at:
-	 size_t nodeTarget = p_node_flags->rank0( _symbol_start( x>>1 ) ) + p_edges->rank( pos + 1, x );
-
-	 size_t posTarget = _symbol_start( x >> 1 ) + p_edges->rank( pos, x );
-
-	 if (nodeTarget > m_num_nodes) {
-	    posTarget = p_node_flags->size();
-	 } else {
-	    posTarget = p_node_flags->select0( nodeTarget - 1);
-	 }
-	 
-	 p_node_flags->insert( posTarget , 0 );
-	 m_num_nodes += 1;
-	 p_edges->insert( posTarget, 0 ); // dummy edge
-
-	 for (symbol_type i = 0; i < sigma+1; ++i){
-	    if ( i >= (x>>1)){
-	       ++m_symbol_ends[i];
-	    }
-	 }
-
-	 if (posTarget <= pos)
-	    ++pos;
-      }
-
-      return pos;
-   }
-   
    //This function deletes an edge kmer at position pos
    //
    // It may leave the graph in an inconsistent state,
    // (all nodes may not have incoming edge, etc.),
    // so use carefully and maintain the graph state externally.
-   void delete_edge_refactor( size_t pos, string kmer ) {
+   void _delete_edge_at_position( size_t pos, string kmer, bool delete_if_empty = true ) {
       //First, check if this is first edge of multi-edge node
       //If so, the node flag of the next edge must be updated
       size_t node_decrement = 1; //did we remove a node?
@@ -693,11 +594,25 @@ public:
 	       p_node_flags->remove( pos + 1 );
 	       p_node_flags->insert( pos + 1, 0 ); //second is now first after deletion at pos
 	       node_decrement = 0;
-	    } 
+	    } else {
+	       //this edge is the only edge of this node
+	       //hence, after deletion, this node will be empty
+	       if (!delete_if_empty) {
+		  //the user doesn't want to delete the node, just the edge
+		  node_decrement = 0;
+		  _add_edge_to_node( pos, 0 );
+		  //this is now a multi-edge node (with an empty outgoing).
+		  //the edge to be deleted is at pos + 1
+		  pos = pos + 1;
+	       }
+	    }
 	 } else {
 	    //not first of node
 	    node_decrement = 0;
 	 }
+      } else {
+	 //not a valid edge position
+	 return;
       }
 
       //Next, check if there is another edge incoming to the
@@ -756,227 +671,301 @@ public:
 	 }
       }
    }
-   
-   void delete_edge(size_t start , string kmer){
 
-      size_t out = outdegree(_edge_to_node(start));
+   /*
+    * @pos -- the first edge of the node to which this edge will be added
+    * @x   -- the character of the outgoing edge
+    * @targetExists, @idxIncoming
+    *      -- if the node corresponding to the target of this edge exists,
+    *         targetExists = true, and idxIncoming contains the index of
+    *         the first edge incident with target
+    */
+   size_t _add_edge_to_node( size_t pos, symbol_type x, bool targetExists = false, size_t idxIncoming = 0 ) {
       
-      if (out == 0) {
-      	 
-      	 //Will assume user is not calling
-      	 //this if this node has an incoming edge
-      	 size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
+      bool edge_added = false;
+      if ( p_edges->at(pos) == 0 ) {
+	 p_edges->remove(pos);
+	 p_edges->insert(pos, x);
+	 //for (symbol_type i = 0; i < sigma+1; ++i){
+	 //--m_symbol_ends[i];
+	 //}
+      } else {
 
-      	 p_edges->remove(start);
-
-      	 p_node_flags->remove(start);
-
-	 
-      	 for (symbol_type i = 0; i < sigma+1; ++i){
-      	    if ( i >= to_be_decreased){
-      	       m_symbol_ends[i]--;
-
-      	    }
-      	 }
-      	 m_num_nodes-=1;
-
-      	 return;
-      }
-
-      size_t in = indegree(_edge_to_node(_forward(start)));
-
-      size_t forward_index = _forward(start);
-      size_t forward_lab = (*p_edges)[_forward(start)];
-      size_t forward_to_be_decreased = _encode_symbol(kmer[k-1]);//(*p_edges)[start]/2;//_encode_symbol(edge_label(_forward(start))[k-2]);
-      
-      if (in > 1 && out > 1){
-	 size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
-	 p_edges->remove(start);
-	 for (symbol_type i = 0; i < sigma+1; ++i){
-	    if ( i >= to_be_decreased){
-	       m_symbol_ends[i]--;
-
-	    }
-	 }
-	 size_t next_incoming_edge = start+ outdegree(_edge_to_node(start))-1;
-	 size_t lab_edge = (*p_edges)[next_incoming_edge];
-	 if (lab_edge % 2 == 1){
-
-	    p_edges->remove(next_incoming_edge);
-	    p_edges->insert(next_incoming_edge,lab_edge-1);
-
-	 }
-
-	 if ((*p_node_flags)[start] == 0){
-	    p_node_flags->remove(start+1);
-	 }
-	 else{
-	    p_node_flags->remove(start);
-	 }
-      }
-      else{
-	 if (out == 1 && in == 1){
-
-
-	    p_edges->remove(start);   //for removing any edge with outdegree 1
-	    p_edges->insert(start, 0 );
-	 }
-
-
-	 if (in > 1){
-
-	    //size_t next_incoming_edge = start+ outdegree(_edge_to_node(start));
-	    symbol_type xx = _strip_edge_flag( p_edges->at( start ) ) << 1;
-
-	    if (xx == p_edges->at( start ) ) {
-	       symbol_type xplus = xx | 1;
-	       size_t next_incoming_edge = p_edges->select( p_edges->rank( start, xplus ) , xplus );
-	       symbol_type lab_edge = (*p_edges)[next_incoming_edge];
-
-	       p_edges->remove(next_incoming_edge);
-	       p_edges->insert(next_incoming_edge, xx);
-	       
+	 //Find where within this node to insert the edge
+	 size_t startPos = pos;
+	 bool nextNode = false;
+	 while (pos < num_edges()) {
+	    if (p_edges->at( pos ) < x) {
+	       ++pos;
+	       if (pos >= num_edges()) {
+		  nextNode = true;
+		  break;
+	       }
+	       if (p_node_flags->at(pos) == 0) {
+		  nextNode = true;
+		  break;
+	       }
+	    } else {
+	       break;
 	    }
 	    
-	    p_edges->remove(start);
-	    p_edges->insert(start,0);
 
 	 }
 
-
-	 if (out >  1 ) {
-
-	    size_t to_be_decreased = _encode_symbol(kmer[k-2]);//edge_label(start)[k-2]);
-
-	    p_edges->remove(start);
-	    for (symbol_type i = 0; i < sigma+1; ++i){
-               if ( i >= to_be_decreased){
-		  m_symbol_ends[i]--;
-               }
+	 if (!nextNode) {
+	    if ( (p_edges->at(pos) >> 1) == (x >> 1) ) {
+	       //this edge already exists
+	       return pos;
 	    }
+	 }
+	 
+	 edge_added = true;
 
-	    if ((*p_node_flags)[start] == 0)
-	       p_node_flags->remove(start+1);
+	 p_edges->insert( pos, x );
 
-	    else
-	       p_node_flags->remove(start);
+	 if (pos > startPos)
+	    p_node_flags->insert( pos, 1 );
+	 else
+	    p_node_flags->insert( pos + 1, 1 );
 
+ 
+	 //update symbol counts
+	 symbol_type y = _symbol_access( startPos );
 
+	 for (symbol_type i = 0; i < sigma+1; ++i){
+	    if ( i >= (y)){
+	       ++m_symbol_ends[i];
+	    }
+	 }
+      }
+
+      if (x == 0) {
+	 //an empty edge was added to this node. let's hope
+	 //the user knows what they are doing
+	 //no need to worry about targets here.
+	 return pos;
+      }
+
+      //need to check if target node exists. If not, need to add an
+      //empty edge to create it.
+      if (targetExists) {
+	 //need to determine if the newly added edge should have a minus flag.
+	 //if not, the idxIncoming needs to have a minux flag
+	 //this is decided simply by their relative order
+	 if (idxIncoming >= pos) {
+	    if (edge_added)
+	       ++idxIncoming; //a new edge has been added before it
+	    //and it needs to be replaced with a minus flag
+	    p_edges->remove( idxIncoming );
+	    p_edges->insert( idxIncoming, x | 1 ); //has the same symbol as the new edge at pos
+	 } else {
+	    
+	    p_edges->remove( pos );
+	    p_edges->insert( pos, x | 1 );
+	    
+	 }
+      } else {
+	 //target node does not exist
+	 //the position it should be at:
+	 size_t nodeTarget = p_node_flags->rank0( _symbol_start( x>>1 ) ) + p_edges->rank( pos + 1, x );
+
+	 size_t posTarget = _symbol_start( x >> 1 ) + p_edges->rank( pos, x );
+
+	 if (nodeTarget > m_num_nodes) {
+	    posTarget = p_node_flags->size();
+	 } else {
+	    posTarget = p_node_flags->select0( nodeTarget - 1);
+	 }
+	 
+	 p_node_flags->insert( posTarget , 0 );
+	 m_num_nodes += 1;
+	 p_edges->insert( posTarget, 0 ); // dummy edge
+
+	 for (symbol_type i = 0; i < sigma+1; ++i){
+	    if ( i >= (x>>1)){
+	       ++m_symbol_ends[i];
+	    }
 	 }
 
-	 if (in == 1 && forward_lab == 0){ //only for removing last edge of a read
+	 if (posTarget <= pos)
+	    ++pos;
+      }
 
-	    if (out > 1 && start < forward_index){
-	       p_edges->remove(forward_index - 1);
-	       p_node_flags->remove(forward_index - 1);
-	    }
-	    else{
+      return pos;
+   }
 
-	       p_edges->remove(forward_index);
-	       p_node_flags->remove(forward_index);
-	       
-	    }
-	    for (symbol_type i = 0; i < sigma+1; ++i){
-	       if ( i >= forward_to_be_decreased ){
-		  m_symbol_ends[i]--;
+   /*
+    * Adds dummy chain for the node represented by 
+    * label starting at nodeBegin
+    * returns the index of first edge of nodeBegin
+    */
+   size_t _add_dummy_chain( std::string::iterator nodeBegin ) {
+      char c;
+      size_t nodeStart = 0;
+      size_t outEdge;
+      size_t pos = 0;
+      dyn_boss::symbol_type x;
+      
+      //need to make sure the all dummy node exists
+      if (m_symbol_ends[ 0 ] == 0) {
+	 //$$$$ does not exist.
+	 //create it
+	 //it is needed
+	 p_node_flags->insert( 0, 0 );
+	 p_edges->insert( 0, 0 );
+	 m_num_nodes += 1;
+	 for (dyn_boss::symbol_type i = 0; i < sigma+1; ++i){
+	    ++(m_symbol_ends[i]);
+	 }
+      }
+      
+      bool outEdgeExists = true; //optimistic, aren't we?
+      do {
+	 c = *nodeBegin++;
+	 ++pos;
+	 x = _encode_symbol( c ) << 1;
+
+	 outEdge = _first_edge( nodeStart, x );
+	 
+	 size_t dist = _rank_distance_alan( nodeStart, outEdge );
+
+	 if (dist > 0 || outEdge == num_edges() ) {
+	    outEdgeExists = false;
+	 } else {
+	    //the edge exists, so let's follow it
+	    nodeStart = _forward( outEdge );
+
+	 }
+      } while (outEdgeExists);
+
+      //we have gotten to a dummy node that needs a new outgoing edge
+      while (pos < k) {
+	 //string dedge( k - pos, '$' );
+	 //dedge += kmer.substr( 0, pos );
+	 //cerr << "Adding dummy edge: " << dedge << endl;
+
+	 //cerr << "Adding " << x << " at " << nodeStart << endl;
+	 outEdge = _add_edge_to_node( nodeStart, x );
+	 
+	 nodeStart = _forward( outEdge );
+
+	 ++pos;
+	 auto c = *nodeBegin++;
+	 x = _encode_symbol( c ) << 1;
+      }
+
+      return nodeStart;
+   }
+
+   /*
+    * removes the dummy chain ending at dummyLabel
+    */
+   bool _remove_dummy_chain( std::string dummyLabel ) {
+      size_t idx;
+      bool rvalue = false;
+      if (index_edge_alan( dummyLabel.begin(), idx ) ) {
+	 rvalue = true;
+	 vector< size_t > vDelete;
+	 vector< string > vEdgesToDelete;
+
+	 size_t start = idx;
+	 size_t i = 0;
+	 while ( i < k - 1){
+
+	    size_t out = outdegree(_edge_to_node(start));
+	     
+	    //insert to maintain increasing order
+	    vector<size_t>::iterator itPos = vDelete.begin();
+	    size_t posDelete = 0;
+	    while ( itPos != vDelete.end() ) {
+	       if ( (*itPos) < start ) {
+		  ++itPos;
+		  ++posDelete;
+	       } else {
+		  break;
 	       }
 	    }
-	    m_num_nodes-=1;
+	     
+	    vDelete.insert( itPos, start );
+	    vEdgesToDelete.insert( (vEdgesToDelete.begin() + posDelete),
+				   dummyLabel );
+	     
+	    if (i == k - 1)
+	       break;
+	     
+	    if (out > 1 ) break;
+	    size_t backward_edge;
+	    start = _backward(start);
+	     
+	    dummyLabel = '$' + dummyLabel.substr(0,k-1);
+	    i++;
+	     
 	 }
+      
+
+	 for (size_t i = 0; i < vDelete.size(); ++i) {
+	    _delete_edge_at_position( vDelete[i] - i, vEdgesToDelete[i] );
+
+	 }
+
 
       }
 
+      return rvalue;
    }
 
+   /*
+    * removes the dummy chain ending at start (inclusive)
+    */
+   void _remove_dummy_chain( size_t start, std::string dummyLabel ) {
+      
+      vector< size_t > vDelete;
+      vector< string > vEdgesToDelete;
 
-   size_t add(size_t start, symbol_type x ,string  kmer, bool last_node){
+      size_t i = 0;
+      while ( i < k - 1){
 
-      if (start == 0){
-	 for (size_t m = 0; m <4; ++m){
-	    if (edge_label(m) == string(k-1, '$')+kmer[k-1])
-	       return start;
-	 }
-      }
-
-      bool last_node_present = false;
-      size_t check;
-
-      if (last_node){
-	 if (index(kmer.substr(1).begin(),0) == 1) {
-            last_node_present = true;
-            size_t i_last  = _next_edge(start, _encode_symbol(kmer[k-1]));
-            check = (i_last == num_edges() || i_last - start >= 4) ? 0 : i_last - start;
-
-	 }
-      }
-
-      size_t to_be_increased = _encode_symbol(kmer[k-2]);//_encode_symbol(edge_label(start)[k-2]);
-      size_t ins = 2*x;
-      int outdeg = -1;
-      if (ins > (*p_edges)[start]){
-	 outdeg = outdegree (_edge_to_node(start));
-	 if (outdeg == 0) { //outgoing dummy
-            p_edges->remove(start);
-            p_edges->insert(start,ins);
-	 }
-	 else {
-	    size_t i = 1;
-	    for (i = 1; i < outdeg; ++i){
-	       if (ins < (*p_edges)[start+i])
-		  break;
+	 size_t out = outdegree(_edge_to_node(start));
+	     
+	 //insert to maintain increasing order
+	 vector<size_t>::iterator itPos = vDelete.begin();
+	 size_t posDelete = 0;
+	 while ( itPos != vDelete.end() ) {
+	    if ( (*itPos) < start ) {
+	       ++itPos;
+	       ++posDelete;
+	    } else {
+	       break;
 	    }
-	    start += i;
-	    p_edges->insert(start,ins);
-	    p_node_flags->insert(start,1);
 	 }
+	     
+	 vDelete.insert( itPos, start );
+	 vEdgesToDelete.insert( (vEdgesToDelete.begin() + posDelete),
+				dummyLabel );
+	     
+	 if (i == k - 1)
+	    break;
+	     
+	 if (out > 1 ) break;
+	 size_t backward_edge;
+	 start = _backward(start);
+	     
+	 dummyLabel = '$' + dummyLabel.substr(0,k-1);
+	 i++;
+	     
+      }
+      
+
+      for (size_t i = 0; i < vDelete.size(); ++i) {
+	 _delete_edge_at_position( vDelete[i] - i, vEdgesToDelete[i] );
 
       }
-      else{
-         if ((*p_edges)[start] != ins){
-	    p_edges->insert(start,ins);
-	    p_node_flags->insert(start+1,1);
-	 }
-      }
 
 
-      for (symbol_type i = 0; i < sigma+1; ++i){
-	 if (outdeg != 0 && i >= to_be_increased){
-	    m_symbol_ends[i]++;
-	 }
-      }
-
-
-      int d_insertion = -1;
-
-      if (!last_node_present) d_insertion = _forward(start);
-
-
-
-      if (d_insertion != -1){ //destination node is not present
-	 p_edges->insert(d_insertion , 0);
-	 p_node_flags->insert(d_insertion , 0);
-	 m_num_nodes++;
-
-      }
-      //make the inderee > 1
-      else {
-	 //if (check != 0) {
-	    p_edges->remove(start+check);
-	    p_edges->insert(start+check,ins+1);
-	    //}
-      }
-      if (start >= d_insertion)
-	 start++;
-      for (symbol_type i = 0; i < sigma+1; ++i){
-
-	 if (d_insertion != -1 && i >= x){
-	    m_symbol_ends[i]++;
-	 }
-      }
-
-      return start;
    }
 
+    
+   
    template <class InputIterator>
    bool index(InputIterator in , bool edge)  {
       auto c = *in++;
@@ -1300,67 +1289,19 @@ public:
       bool sourceExists = index_alan( kmer.begin(), idxSource );
       bool targetExists = false;
       string::iterator in = kmer.begin();
-      size_t pos = 0;
       size_t nodeStart = 0;
       size_t outEdge;
-      dyn_boss::symbol_type x;
       char c;
       //   cerr << "Adding " << kmer << endl;
       if (!sourceExists) {
-	 //We're going to have to add dummies
-	 //need to make sure the all dummy node exists
-	 if (m_symbol_ends[ 0 ] == 0) {
-	    //$$$$ does not exist.
-	    //create it
-	    //it is needed
-	    p_node_flags->insert( 0, 0 );
-	    p_edges->insert( 0, 0 );
-	    m_num_nodes += 1;
-	    for (dyn_boss::symbol_type i = 0; i < sigma+1; ++i){
-	       ++(m_symbol_ends[i]);
-	    }
-	 }
-      
-	 bool outEdgeExists = true; //optimistic, aren't we?
-	 do {
-	    c = *in++;
-	    ++pos;
-	    x = _encode_symbol( c ) << 1;
-
-	    outEdge = _first_edge( nodeStart, x );
-	 
-	    size_t dist = _rank_distance_alan( nodeStart, outEdge );
-
-	    if (dist > 0 || outEdge == num_edges() ) {
-	       outEdgeExists = false;
-	    } else {
-	       //the edge exists, so let's follow it
-	       nodeStart = _forward( outEdge );
-
-	    }
-	 } while (outEdgeExists);
-
-	 //we have gotten to a dummy node that needs a new outgoing edge
-	 while (pos < k) {
-	    string dedge( k - pos, '$' );
-	    dedge += kmer.substr( 0, pos );
-	    //cerr << "Adding dummy edge: " << dedge << endl;
-
-	    //cerr << "Adding " << x << " at " << nodeStart << endl;
-	    outEdge = add_edge_simple( nodeStart, x );
-	 
-	    nodeStart = _forward( outEdge );
-
-	    ++pos;
-	    auto c = *in++;
-	    x = _encode_symbol( c ) << 1;
-	 }
+	 //add dummies + source
+	 nodeStart = _add_dummy_chain( kmer.begin() );
       } else {
 	 nodeStart = _node_to_edge(idxSource);
-	 x = _encode_symbol( kmer.back() ) << 1;
       }
-
-      //wunderbar, the source exists, and is located at nodeStart
+      
+      //The source exists and is located at nodeStart
+      dyn_boss::symbol_type x = _encode_symbol( kmer.back() ) << 1;
       outEdge = _first_edge( nodeStart, x );
       size_t dist = _rank_distance_alan( nodeStart, outEdge );
       bool edge_added = false;
@@ -1382,8 +1323,8 @@ public:
 	       idxIncoming = _backward( idxTarget );
 
 	    }
-	    //	 cerr << "Adding " << x << " at " << nodeStart << endl;
-	    add_edge_simple( nodeStart, x, targetExists, idxIncoming );
+
+	    _add_edge_to_node( nodeStart, x, targetExists, idxIncoming );
 	    edge_added = true;
 	 } else {
 	    //the edge already exists :/
@@ -1396,62 +1337,63 @@ public:
       //If target has an incoming dummy, it is no longer necessary
       if (targetExists && edge_added) {
 	 string incoming_dummy = '$'+ kmer.substr(1); //dummy edge
-	 size_t incomingIndex;
       
-	 //assert( ( index( incoming_dummy.begin(), true) != 0 ) == index_edge_alan( incoming_dummy.begin(), incomingIndex ) );
-	 if (index_edge_alan( incoming_dummy.begin(), incomingIndex ) ) {
-	    //if (index( incoming_dummy.begin(), true )) {
-	    vector< size_t > vDelete;
-	    vector< string > vEdgesToDelete;
-
-	    size_t start = incomingIndex;
-	    size_t i = 0;
-	    while ( i < k - 1){
-
-	       size_t out = outdegree(_edge_to_node(start));
-	     
-	       //insert to maintain increasing order
-	       vector<size_t>::iterator itPos = vDelete.begin();
-	       size_t posDelete = 0;
-	       while ( itPos != vDelete.end() ) {
-		  if ( (*itPos) < start ) {
-		     ++itPos;
-		     ++posDelete;
-		  } else {
-		     break;
-		  }
-	       }
-	     
-	       vDelete.insert( itPos, start );
-	       vEdgesToDelete.insert( (vEdgesToDelete.begin() + posDelete),
-				      incoming_dummy );
-	     
-	       if (i == k - 1)
-		  break;
-	     
-	       if (out > 1 ) break;
-	       size_t backward_edge;
-	       start = _backward(start);
-	     
-	       incoming_dummy = '$' + incoming_dummy.substr(0,k-1);
-	       i++;
-	     
-	    }
-      
-
-	    for (size_t i = 0; i < vDelete.size(); ++i) {
-	       delete_edge_refactor( vDelete[i] - i, vEdgesToDelete[i] );
-
-	    }
-
-
-	 }
+	 _remove_dummy_chain( incoming_dummy );
       }
       
       if (add_reverse_complement) {
 	 string revcomp;
 	 rev_complement_string( kmer, revcomp );
 	 add_edge( revcomp, false );
+      }
+   }
+
+   void delete_edge( std::string kmer, bool delete_reverse_complement = true,
+		     bool delete_source_node = true ) {
+      size_t indexEdge;
+      if ( index_edge_alan( kmer.begin(), indexEdge ) ) {
+	 //the edge exists
+	 //Get info about the target
+	 size_t v = _forward( indexEdge ); 
+	 size_t indeg = indegree( _edge_to_node( v ) );
+
+	 if (indeg == 1) {
+	    //need to add dummies for v
+	    _add_dummy_chain( kmer.begin() + 1 );
+	    //graph has changed. re-index edge
+	    index_edge_alan( kmer.begin(), indexEdge );
+	 }
+
+	 
+	 size_t u = _edge_to_node( indexEdge );
+	 size_t outdeg = outdegree( u );
+	 
+	 // Delete the edge. At this point, do not want to delete source
+	 _delete_edge_at_position( indexEdge, kmer, false  );
+
+	 if (delete_source_node) {
+	    if (outdeg == 1) {
+	       //need to delete associated dummies, if any
+	       string dummyLabel = "$" + kmer;
+	       dummyLabel.pop_back();
+	       size_t idx;
+	       if (index_edge_alan( dummyLabel.begin(), idx ) ) {
+		  //remove u
+		  string strU = kmer;
+		  strU.pop_back();
+		  strU += "$";
+		  _delete_edge_at_position( _node_to_edge( u ), strU, true );
+		  //remove dummies as required
+		  _remove_dummy_chain( idx, dummyLabel );
+	       }
+	    }
+	 }
+      }
+
+      if ( delete_reverse_complement ) {
+	 string revcomp;
+	 rev_complement_string( kmer, revcomp );
+	 delete_edge( revcomp, false, delete_source_node );
       }
    }
 };

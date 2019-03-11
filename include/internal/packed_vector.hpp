@@ -161,7 +161,6 @@ namespace dyn{
       uint64_t at(uint64_t i){
 
 	 //assert(i<size_);
-
 	 return MASK & (words[i/int_per_word_] >> ((i%int_per_word_)*width_));
 
       }
@@ -445,10 +444,12 @@ namespace dyn{
 
 	 
 	 while ( (words.size() - extra_ - 1)*(int_per_word_) >= size_ - 1 ) {
-	    //more than extra_ extra words, delete 
-	    words.pop_back();
-	    if (words.size() == 0)
+	    //more than extra_ extra words, delete
+	    if (words.size() < extra_)
 	       break;
+	    
+	    words.pop_back();
+
 	 }
 
 	 --size_;
@@ -457,6 +458,7 @@ namespace dyn{
       }
       
       void insert(uint64_t i, uint64_t x){
+
 
 	 if(bitsize(x)>width_){
 
@@ -479,6 +481,8 @@ namespace dyn{
 	    for(auto x:words) temp[j++] = x;
 
 	    words = vector<uint64_t>(temp);
+
+
 
 	 }
 

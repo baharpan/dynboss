@@ -178,7 +178,6 @@ namespace dyn{
 	 //get code of c
 	 //if code does not yet exist, create it
 	 auto code = ae.encode(c);
-
 	 root.insert(i,code,c);
 
 	 ++n;

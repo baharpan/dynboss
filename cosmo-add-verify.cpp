@@ -54,7 +54,6 @@ void getKmers( size_t& nKmers,
 	       size_t k,
 	       vector< string >& kmers,
 	       parameters_t& p) {
-   cerr << "Getting k-mers from " << p.kmer_filename << "...\n";
    ifstream in(p.kmer_filename );
    string sline;
    vector< string > vline;
@@ -112,9 +111,9 @@ int main(int argc, char* argv[]) {
   cout << "k             : " << sdbg.k << endl;
   cout << "num_nodes()   : " << sdbg.num_nodes() << endl;
   cout << "num_edges()   : " << sdbg.num_edges() << endl;
-  // size_t bs = sdbg.bit_size();
-  // cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
-  // cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+  size_t bs = sdbg.bit_size();
+  cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+  cout << "Bits per edge : " << bs / static_cast<double>(sdbg.num_edges()) << " Bits" << endl;
   
   cout << "===============================\n";
   cout << "Building dbg online...\n";
@@ -149,9 +148,9 @@ int main(int argc, char* argv[]) {
   cout << "k             : " << dbg.k << endl;
   cout << "num_nodes()   : " << dbg.num_nodes() << endl;
   cout << "num_edges()   : " << dbg.num_edges() << endl;
-  // bs = dbg.bit_size();
-  // cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
-  // cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+  bs = dbg.bit_size();
+  cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+  cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
   cout << "===============================\n";
   cout << "Beginning graph validation...\n";

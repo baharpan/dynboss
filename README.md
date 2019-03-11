@@ -12,7 +12,7 @@ sudo apt-get install libtclap-dev
 
 ## How to compile
 ```
-#change the paths on Makefile (although if sdsl-lite is installed to /usr/local/, this shouldn't be necessary.
+#change the paths on Makefile (although if sdsl-lite is installed to /usr/local/, this shouldn't be necessary)
 make cosmo-add-verify
 ```
 ## How to validate addition

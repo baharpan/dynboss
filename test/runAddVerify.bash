@@ -2,7 +2,7 @@
 dsk="../dsk-1.6906/dsk"
 CosmoPack="../cosmo-pack"
 CosmoAddVerify="../cosmo-add-verify"
-k=24
+k=64
 
 #OutFile = "./cmpResultsCosmoBowe.txt"
 

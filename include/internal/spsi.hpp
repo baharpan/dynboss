@@ -275,6 +275,7 @@ namespace dyn{
        * remove the integer x at position i
        */
       void remove(uint64_t i){
+
 	 node* new_root = root->remove(i);
 	 if (new_root != NULL) {
 	    delete root;
