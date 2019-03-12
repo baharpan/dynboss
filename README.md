@@ -51,7 +51,7 @@ same edges and nodes. The script
 ```
 cd test
 bash runAddVerify.bash yeast_1
-```
+[comment]: <> (```
 ## How to test
 ```
 #count the k-mers
@@ -66,4 +66,4 @@ ls -1 --color=no *.fasta |xargs -l -i echo "{}.kmc.sorted" > filtered_kmc2_list
 ./cosmo-pack -k filtered_kmc2_list
 #build Dynamic BOSS
 ./cosmo-add-delete filtered_kmc2_list.packed
-```
+```)
