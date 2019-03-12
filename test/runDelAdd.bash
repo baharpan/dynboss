@@ -1,21 +1,18 @@
 
 dsk="../dsk-1.6906/dsk"
 CosmoPack="../cosmo-pack"
-cosmodel="../cosmo-delete-verify"
+cosmodel="../cosmo-delete-add"
 k=64
 
 #OutFile = "./cmpResultsCosmoBowe.txt"
 
-if [ $# -lt 2 ]; then
-    echo "Usage: $0 <fastafilebase> <fastafile2base>"
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <fastafilebase>"
     exit
 fi
 
 fnamebase="$1"
 fileFasta="$1.fasta"
-
-fnamebase2="$2"
-fileFasta2="$2.fasta"
 
 cmd="$dsk $fileFasta $k"
 echo $cmd
@@ -43,7 +40,7 @@ $cmd
 # echo $cmd
 # $cmd
 
-cmd="$cosmodel $filePacked $fileFasta2"
+cmd="$cosmodel $filePacked"
 echo $cmd
 $cmd
 

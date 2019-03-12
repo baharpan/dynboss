@@ -82,21 +82,36 @@ int main(int argc, char* argv[]) {
        all_kmers.push_back(kmer);
     }
 
-    cerr<<"number of kmers to process: "<<all_kmers.size()<<endl;
+    cerr << "number of kmers to delete: " << all_kmers.size()<<endl;
+    cerr << "Beginning deletion..." << endl;
     clock_t t_start = clock();
     
-    
     for (size_t i = 0; i< all_kmers.size();i++){
-       if (dbg.index( all_kmers[i].begin(), 0 ) != 0)
-	  dbg = Delete_Edge (dbg, all_kmers[i]);
+       if (all_kmers.size() > 100) {
+	if ( i % (all_kmers.size() / 100) == 0 ) {
+	   cerr << "\r                                            \r";
+	   cerr << ((double)i) / all_kmers.size() * 100.0 << "%";
+	}
+     }
+       dbg.delete_edge( all_kmers[i]);
     }
+
     double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-    cerr<<"DONE with deletion of all kmers\n";
+
+    cerr << "DONE with deletion of all kmers\n";
+
     cerr << "Time per Op: " << t_elapsed / nOps << endl;
     t_start = clock();
     for (size_t i = 0; i< all_kmers.size();i++){
-       dbg = Add_Edge (dbg, all_kmers[i],1);
+       if (all_kmers.size() > 100) {
+	  if ( i % (all_kmers.size() / 100) == 0 ) {
+	     cerr << "\r                                            \r";
+	     cerr << ((double)i) / all_kmers.size() * 100.0 << "%";
+	  }
+       }
+       dbg.add_edge(all_kmers[i]);
     }
+
     t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
     cerr << "DONE with addition of all kmers\n";
     cerr << "Time per Op: " << t_elapsed / nOps << endl;
@@ -172,15 +187,6 @@ int main(int argc, char* argv[]) {
   }
 
 cerr << "Verification passed!\n";
-cerr << "===============================\n";
-cerr << "Deleting some random nodes\n";
-for (size_t i = 0; i < dbg.num_nodes(); i += dbg.num_nodes()/3)
-  dbg = Delete_node(dbg , dbg.node_label(i));
-  cerr << "new greph     : " << endl;
-  cerr << "k             : " << dbg.k << endl;
-  cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
-  cerr << "num_edges()   : " << dbg.num_edges() << endl;
-  bs = dbg.bit_size();
-  cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
-  cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+//cerr << "===============================\n";
+
 }
