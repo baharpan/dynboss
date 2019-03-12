@@ -3,6 +3,7 @@ Dynamic succinct de Bruijn graph
 
 ## Dependencies
 - SDSL -- [Succinct Data Structure Library](https://github.com/simongog/sdsl-lite)
+
   To avoid the necessity of editing the Makefile, SDSL may be installed to `/usr/local/`.
 - [boost](https://github.com/boostorg/boost)
 - [tclap](http://tclap.sourceforge.net/)
@@ -10,15 +11,36 @@ Dynamic succinct de Bruijn graph
 Boost and tclap may be installed on a Debian-based system with the following commands.
 ```
 sudo apt-get install libboost-dev
-sudo apt-get install libtclap-dev
-	
+sudo apt-get install libtclap-dev	
 ```
 
 ## How to compile
-Update the paths on Makefile (unnecessary if sdsl-lite is installed to /usr/local/).
+### Dynamic BOSS
+Update the paths on Makefile (unnecessary if dependencies installed on a Debian-based system as described above).
 ```
 make
 ```
+### DSK
+```
+cd dsk-1.6906
+make k=64
+```
+## Building the data structure
+Start with input FASTA file, for example `test/yeast_1.fasta`, which is included. Run DSK (example with `k=40`:
+```
+cd test
+../dsk-/1.6906/dsk yeast_1.fasta 40
+```
+This produces output file `yeast_1.solid_kmers_binary`. Next, run `cosmo-pack`:
+```
+../cosmo-pack yeast_1.solid_kmers_binary
+```
+which produces output `yeast_1.solid_kmers_binary.packed`
+Finally, run `cosmo-build-dyn` to build dynamic BOSS:
+```
+../cosmo-build-dyn yeast_1.solid_kmers_binary.packed
+```
+to produce output file `yeast_1.solid_kmers_binary.packed.dbg`. 
 ## How to validate addition
 ```
 cd dsk-1.6906
