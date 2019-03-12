@@ -44,6 +44,7 @@ Finally, run `cosmo-build-dyn` to build dynamic BOSS:
 ```
 to produce output file `yeast_1.solid_kmers_binary.packed.dbg`. 
 ## Validation of addition
+This test confirms that `add-edge` produces the same graph as the static construction method.
 This test constructs BOSS using a static construction method, as well as online from an empty graph
 using the dynamic `add_edge` function. The two graphs are then checked to ensure they contain the
 same edges and nodes. The script
@@ -62,4 +63,15 @@ then adds `k`-mers from a FASTA file into the graph with `add-edge` then deletes
 ```
 cd test
 bash runDelVerify.bash yeast_1 yeast_2
+```
+
+### Test 2
+This test deletes random `k`-mers from a starting graph, then adds them back in and verifies that the initial and final graphs are the same.
+This test constructs BOSS using a static construction method from DSK input,
+then deletes `10000` random `k`-mers with `delete-edge`
+and confirms that the starting and final graphs are the same.
+`test/runDelAdd.bash` runs the test.  Input is a single FASTA file, for example `test/yeast_1.fasta`.
+```
+cd test
+bash runDelAdd.bash yeast_1
 ```
