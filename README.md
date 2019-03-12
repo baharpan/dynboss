@@ -7,6 +7,7 @@ Dynamic succinct de Bruijn graph
   To avoid the necessity of editing the Makefile, SDSL may be installed to `/usr/local/`.
 - [boost](https://github.com/boostorg/boost)
 - [tclap](http://tclap.sourceforge.net/)
+- [DSK](https://github.com/GATB/dsk), version 1.6906. The source code for this version is provided in this repository, in `dsk-1.6906`.
 
 Boost and tclap may be installed on a Debian-based system with the following commands.
 ```
