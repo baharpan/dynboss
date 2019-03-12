@@ -52,3 +52,14 @@ same edges and nodes. The script
 cd test
 bash runAddVerify.bash yeast_1
 ```
+## Validation of deletion
+These tests confirm that deletion is the inverse of addition.
+### Test 1
+This test constructs BOSS using a static construction method from DSK input,
+then adds `k`-mers from a FASTA file into the graph with `add-edge` then deletes them with `delete-edge` and confirms that the starting and final graphs are the same.
+`test/runDelVerify.bash` runs the test.  Input are two FASTA files, for example `test/yeast_1.fasta` and
+`test/yeast_2.fasta`. The graph is initially constructed from the first FASTA file, then `k`-mers are added and deleted from the second.
+```
+cd test
+bash runDelVerify.bash yeast_1 yeast_2
+```
