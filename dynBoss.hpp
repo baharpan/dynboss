@@ -551,29 +551,29 @@ public:
       return last-1;
    }
 
-   // size_t serialize( ostream& out ) {
-   //    size_t w_bytes = 0;
-   //    out.write((char*)&k,sizeof(k));
-   //    w_bytes += sizeof(k);
-   //    w_bytes += p_node_flags->serialize( out );
-   //    w_bytes += p_edges->serialize( out );
-   //    for (size_t i = 0; i < sigma+1; ++i) {
-   // 	 out.write( (char*)(&(m_symbol_ends[i])), sizeof(size_t) );
-   // 	 w_bytes += sizeof(size_t);
-   //    }
-   //    for (size_t i = 0; i < sigma+1; ++i) {
-   // 	 out.write( (char*)(&(m_edge_max_ranks[i])), sizeof(size_t) );
-   // 	 w_bytes += sizeof(size_t);
-   //    }
-   //    size_t asize = m_alphabet.size();
-   //    out.write( (char*)&asize, sizeof(size_t));
-   //    w_bytes += sizeof(size_t);
-   //    out.write( m_alphabet.c_str() , m_alphabet.size() );
-   //    w_bytes += m_alphabet.size();
-   //    out.write( (char*)&m_num_nodes, sizeof(size_t));
-   //    w_bytes += sizeof(size_t);
-   //    return w_bytes;
-   // }
+   size_t serialize( ostream& out ) {
+      size_t w_bytes = 0;
+      out.write((char*)&k,sizeof(k));
+      w_bytes += sizeof(k);
+      w_bytes += p_node_flags->serialize( out );
+      w_bytes += p_edges->serialize( out );
+      for (size_t i = 0; i < sigma+1; ++i) {
+   	 out.write( (char*)(&(m_symbol_ends[i])), sizeof(size_t) );
+   	 w_bytes += sizeof(size_t);
+      }
+      for (size_t i = 0; i < sigma+1; ++i) {
+   	 out.write( (char*)(&(m_edge_max_ranks[i])), sizeof(size_t) );
+   	 w_bytes += sizeof(size_t);
+      }
+      size_t asize = m_alphabet.size();
+      out.write( (char*)&asize, sizeof(size_t));
+      w_bytes += sizeof(size_t);
+      out.write( m_alphabet.c_str() , m_alphabet.size() );
+      w_bytes += m_alphabet.size();
+      out.write( (char*)&m_num_nodes, sizeof(size_t));
+      w_bytes += sizeof(size_t);
+      return w_bytes;
+   }
 
    size_t size() const { return num_edges(); }
 

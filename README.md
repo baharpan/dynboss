@@ -2,7 +2,11 @@
 Dynamic succinct de Bruijn graph
 
 ## Dependencies
-sdsl-lite, boost, and tclap.
+- SDSL -- [Succinct Data Structure Library](https://github.com/simongog/sdsl-lite)
+  To avoid the necessity of editing the Makefile, SDSL may be installed to `/usr/local/`.
+- [boost](https://github.com/boostorg/boost)
+- [tclap](http://tclap.sourceforge.net/)
+
 Boost and tclap may be installed on a Debian-based system with the following commands.
 ```
 sudo apt-get install libboost-dev
@@ -11,9 +15,9 @@ sudo apt-get install libtclap-dev
 ```
 
 ## How to compile
+Update the paths on Makefile (unnecessary if sdsl-lite is installed to /usr/local/).
 ```
-#change the paths on Makefile (although if sdsl-lite is installed to /usr/local/, this shouldn't be necessary)
-make cosmo-add-verify
+make
 ```
 ## How to validate addition
 ```

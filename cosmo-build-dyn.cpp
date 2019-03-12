@@ -60,21 +60,10 @@ int main(int argc, char* argv[]) {
   cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
   cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
-  dbg.print_boss_matrix( cout );
-  
-  dbg = Add_Edge( dbg, "GTCG", true );
-  //dbg = Add_Edge( dbg, "GTCC", true );
-  //dbg = Add_Edge( dbg, "CGAC", true );
-  dbg = Add_Edge( dbg, "TCGT", true );
-  //dbg = Add_Edge( dbg, "ACGA", true );
-
-  cout << "After additions: " << endl;
-  
-  dbg.print_boss_matrix( cout );
   char * base_name = basename(const_cast<char*>(p.input_filename.c_str()));
-  string outfilename = ((p.output_prefix == "")? base_name : p.output_prefix) + extension;
+  string outfilename = ((p.output_prefix == "") ? base_name : p.output_prefix) + extension;
   //store_to_file(dbg, outfilename);
-  //ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
-  //dbg.serialize( ofs );
-  //ofs.close();
+  ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
+  dbg.serialize( ofs );
+  ofs.close();
 }
