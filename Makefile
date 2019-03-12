@@ -53,7 +53,7 @@ BUILD_REQS=debruijn_graph.hpp io.hpp io.o debug.h
 DYN_BUILD_REQS=dynBoss.hpp io.hpp io.o debug.h
 ASSEM_REQS=debruijn_graph.hpp algorithm.hpp utility.hpp kmer.hpp uint128_t.hpp
 PACK_REQS=lut.hpp debug.h io.hpp io.o sort.hpp kmer.hpp dummies.hpp
-BINARIES=cosmo-pack cosmo-build cosmo-build-dyn cosmo-benchmark cosmo-benchmark-dyn cosmo-add-delete cosmo-validate
+BINARIES=cosmo-pack cosmo-build-dyn cosmo-add-verify cosmo-delete-verify cosmo-delete-add
 
 default: all
 

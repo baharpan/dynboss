@@ -2,7 +2,7 @@
 dsk="../dsk-1.6906/dsk"
 CosmoPack="../cosmo-pack"
 cosmodel="../cosmo-delete-add"
-k=64
+k=8
 
 #OutFile = "./cmpResultsCosmoBowe.txt"
 
