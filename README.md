@@ -44,7 +44,8 @@ to produce output file `yeast_1.solid_kmers_binary.packed.dbg`.
 ## How to validate addition
 This test constructs BOSS using a static construction method, as well as online from an empty graph
 using the dynamic `add_edge` function. The two graphs are then checked to ensure they contain the
-same edges and nodes. Input is a single FASTA file, for example `test/yeast_1.fasta`.
+same edges and nodes. The script
+`test/runAddVerify.bash` runs the test.  Input is a single FASTA file, for example `test/yeast_1.fasta`.
 ```
 cd test
 bash runAddVerify.bash yeast_1
