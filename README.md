@@ -51,6 +51,7 @@ same edges and nodes. The script
 ```
 cd test
 bash runAddVerify.bash yeast_1
+```
 [comment]: <> (```
 ## How to test
 ```
