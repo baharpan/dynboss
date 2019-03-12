@@ -21,6 +21,8 @@
 using namespace std;
 using namespace sdsl;
 
+size_t dummyArg;
+
 void rev_complement_string ( std::string& in, std::string& out ) {
    out = in;
    size_t n = in.size();
@@ -588,14 +590,27 @@ public:
       //First, check if this is first edge of multi-edge node
       //If so, the node flag of the next edge must be updated
       size_t node_decrement = 1; //did we remove a node?
-      if (pos < num_edges() - 1) {
+      if (pos < num_edges()) {
 	 if (p_node_flags->at( pos ) == 0) { //first of node
-	    if (p_node_flags->at(pos + 1)) { //second belongs to same node
-	       p_node_flags->remove( pos + 1 );
-	       p_node_flags->insert( pos + 1, 0 ); //second is now first after deletion at pos
-	       node_decrement = 0;
+	    if (pos < num_edges() - 1) {
+	       if (p_node_flags->at(pos + 1)) { //second belongs to same node
+		  p_node_flags->remove( pos + 1 );
+		  p_node_flags->insert( pos + 1, 0 ); //second is now first after deletion at pos
+		  node_decrement = 0;
+	       } else {
+		  //this edge is the only edge of this node
+		  //hence, after deletion, this node will be empty
+		  if (!delete_if_empty) {
+		     //the user doesn't want to delete the node, just the edge
+		     node_decrement = 0;
+		     _add_edge_to_node( pos, 0 );
+		     //this is now a multi-edge node (with an empty outgoing).
+		     //the edge to be deleted is at pos + 1
+		     pos = pos + 1;
+		  }
+	       }
 	    } else {
-	       //this edge is the only edge of this node
+	       //this edge is the only edge of this node (and is the last edge in the graph)
 	       //hence, after deletion, this node will be empty
 	       if (!delete_if_empty) {
 		  //the user doesn't want to delete the node, just the edge
@@ -799,12 +814,14 @@ public:
     * label starting at nodeBegin
     * returns the index of first edge of nodeBegin
     */
-   size_t _add_dummy_chain( std::string::iterator nodeBegin ) {
+   size_t _add_dummy_chain( std::string::iterator nodeBegin, bool targetExists = false ) {
+
       char c;
       size_t nodeStart = 0;
       size_t outEdge;
       size_t pos = 0;
       dyn_boss::symbol_type x;
+      std::string::iterator nodeBeginSaved = nodeBegin;
       
       //need to make sure the all dummy node exists
       if (m_symbol_ends[ 0 ] == 0) {
@@ -842,11 +859,20 @@ public:
       while (pos < k) {
 	 //string dedge( k - pos, '$' );
 	 //dedge += kmer.substr( 0, pos );
-	 //cerr << "Adding dummy edge: " << dedge << endl;
-
-	 //cerr << "Adding " << x << " at " << nodeStart << endl;
-	 outEdge = _add_edge_to_node( nodeStart, x );
-	 
+	 if (pos < k - 1)
+	    outEdge = _add_edge_to_node( nodeStart, x );
+	 else {
+	    if (targetExists) {
+	       size_t idxIncoming;
+	       index_alan( nodeBeginSaved, idxIncoming );
+	       idxIncoming = _node_to_edge( idxIncoming );
+	       idxIncoming = _backward( idxIncoming );
+	       outEdge = _add_edge_to_node( nodeStart, x, targetExists, idxIncoming );
+	    } else {
+	       outEdge = _add_edge_to_node( nodeStart, x );
+	    }
+	 }
+	    
 	 nodeStart = _forward( outEdge );
 
 	 ++pos;
@@ -860,7 +886,7 @@ public:
    /*
     * removes the dummy chain ending at dummyLabel
     */
-   bool _remove_dummy_chain( std::string dummyLabel ) {
+   bool _remove_dummy_chain( std::string dummyLabel, bool removeTarget = false ) {
       size_t idx;
       bool rvalue = false;
       if (index_edge_alan( dummyLabel.begin(), idx ) ) {
@@ -868,6 +894,13 @@ public:
 	 vector< size_t > vDelete;
 	 vector< string > vEdgesToDelete;
 
+	 if (removeTarget) {
+	    size_t targetId = _forward( idx );
+	    string targetLabel = dummyLabel.substr(1) + "$";
+	    vEdgesToDelete.push_back( targetLabel );
+	    vDelete.push_back( targetId );
+	 }
+	 
 	 size_t start = idx;
 	 size_t i = 0;
 	 while ( i < k - 1){
@@ -917,11 +950,18 @@ public:
    /*
     * removes the dummy chain ending at start (inclusive)
     */
-   void _remove_dummy_chain( size_t start, std::string dummyLabel ) {
+   void _remove_dummy_chain( size_t start, std::string dummyLabel, bool removeTarget = false ) {
       
       vector< size_t > vDelete;
       vector< string > vEdgesToDelete;
 
+      if (removeTarget) {
+	 size_t targetId = _forward( start );
+	 string targetLabel = dummyLabel.substr(1) + "$";
+	 vEdgesToDelete.push_back( targetLabel );
+	 vDelete.push_back( targetId );
+      }
+      
       size_t i = 0;
       while ( i < k - 1){
 
@@ -1023,7 +1063,7 @@ public:
    //input: @in node string to be tested for membership
    //output: @idx = index of node if the returned bool is true
    //        @rvalue = true iff. node exists in dbg
-   bool index_alan(std::string::iterator in, size_t& idx ) {
+   bool index_alan(std::string::iterator in, size_t& idx = dummyArg ) {
       auto c = *in++;
       symbol_type first_symbol = _encode_symbol(c);
 
@@ -1070,7 +1110,7 @@ public:
    //input: @in edge string to be tested for membership
    //output: @idx = index of edge if the returned bool is true
    //        @rvalue = true iff. edge  exists in dbg
-   bool index_edge_alan(std::string::iterator in, size_t& idx ) {
+   bool index_edge_alan(std::string::iterator in, size_t& idx = dummyArg) {
 
       auto c = *in++;
       symbol_type first_symbol = _encode_symbol(c);
@@ -1292,7 +1332,7 @@ public:
       size_t nodeStart = 0;
       size_t outEdge;
       char c;
-      //   cerr << "Adding " << kmer << endl;
+
       if (!sourceExists) {
 	 //add dummies + source
 	 nodeStart = _add_dummy_chain( kmer.begin() );
@@ -1349,29 +1389,47 @@ public:
    }
 
    void delete_edge( std::string kmer, bool delete_reverse_complement = true,
-		     bool delete_source_node = true ) {
+		     bool delete_source_and_target = true ) {
       size_t indexEdge;
       if ( index_edge_alan( kmer.begin(), indexEdge ) ) {
+
 	 //the edge exists
 	 //Get info about the target
 	 size_t v = _forward( indexEdge ); 
 	 size_t indeg = indegree( _edge_to_node( v ) );
-
+	 size_t outdegTarget = outdegree( _edge_to_node( v ) );
+	 bool deleteTarget = false;
 	 if (indeg == 1) {
-	    //need to add dummies for v
-	    _add_dummy_chain( kmer.begin() + 1 );
-	    //graph has changed. re-index edge
-	    index_edge_alan( kmer.begin(), indexEdge );
-	 }
+	    if (outdegTarget > 0) {
+	       //need to add dummies for v
+	       _add_dummy_chain( kmer.begin() + 1, true );
+	       //graph has changed. re-index edge
+	       index_edge_alan( kmer.begin(), indexEdge );
+	    } else {
+	       if (delete_source_and_target) {
+		  //let's delete the target now
+		  //its outdeg is 0, indeg = 1,
+		  //so it consists of a single empty edge
+		  if (v < indexEdge) {
+		     --indexEdge;
+		  }
+		  string strTarget = kmer.substr(1) + "$";
+		  _delete_edge_at_position( v, strTarget, true );
+	       }
+	    }
+	 } 
 
 	 
 	 size_t u = _edge_to_node( indexEdge );
 	 size_t outdeg = outdegree( u );
-	 
-	 // Delete the edge. At this point, do not want to delete source
-	 _delete_edge_at_position( indexEdge, kmer, false  );
 
-	 if (delete_source_node) {
+	 
+	 // Delete the edge. At this point, do not want to delete source yet
+	 _delete_edge_at_position( indexEdge, kmer, false  );
+	 
+
+
+	 if (delete_source_and_target) {
 	    if (outdeg == 1) {
 	       //need to delete associated dummies, if any
 	       string dummyLabel = "$" + kmer;
@@ -1379,12 +1437,12 @@ public:
 	       size_t idx;
 	       if (index_edge_alan( dummyLabel.begin(), idx ) ) {
 		  //remove u
-		  string strU = kmer;
-		  strU.pop_back();
-		  strU += "$";
-		  _delete_edge_at_position( _node_to_edge( u ), strU, true );
+		  //string strU = kmer;
+		  //strU.pop_back();
+		  //strU += "$";
+		  //_delete_edge_at_position( _node_to_edge( u ), strU, true );
 		  //remove dummies as required
-		  _remove_dummy_chain( idx, dummyLabel );
+		  _remove_dummy_chain( idx, dummyLabel, true );
 	       }
 	    }
 	 }
@@ -1393,7 +1451,7 @@ public:
       if ( delete_reverse_complement ) {
 	 string revcomp;
 	 rev_complement_string( kmer, revcomp );
-	 delete_edge( revcomp, false, delete_source_node );
+	 delete_edge( revcomp, false, delete_source_and_target );
       }
    }
 };
