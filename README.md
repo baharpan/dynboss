@@ -26,7 +26,7 @@ cd dsk-1.6906
 make k=64
 ```
 ## Building the data structure
-Start with input FASTA file, for example `test/yeast_1.fasta`, which is included. Run DSK (example with `k=40`:
+Start with input FASTA file, for example `test/yeast_1.fasta`, which is included. No `N` characters are allowed in the FASTA file.  Run DSK (example with `k=40`):
 ```
 cd test
 ../dsk-/1.6906/dsk yeast_1.fasta 40
@@ -42,10 +42,11 @@ Finally, run `cosmo-build-dyn` to build dynamic BOSS:
 ```
 to produce output file `yeast_1.solid_kmers_binary.packed.dbg`. 
 ## How to validate addition
+This test constructs BOSS using a static construction method, as well as online from an empty graph
+using the dynamic `add_edge` function. The two graphs are then checked to ensure they contain the
+same edges and nodes. Input is a single FASTA file, for example `test/yeast_1.fasta`.
 ```
-cd dsk-1.6906
-make
-cd ../test
+cd test
 bash runAddVerify.bash yeast_1
 ```
 ## How to test
