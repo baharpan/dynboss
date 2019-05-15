@@ -93,6 +93,9 @@ cosmo-add-delete: cosmo-add-delete.cpp $(DYN_BUILD_REQS)
 cosmo-add-verify: cosmo-add-verify.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) -o cosmo-add-verify $< io.o $(DEP_FLAGS)
 
+cosmo-add-reads: cosmo-add-reads.cpp $(DYN_BUILD_REQS)
+	$(CXX) $(CPP_FLAGS) -o cosmo-add-reads $< io.o $(DEP_FLAGS)
+
 cosmo-delete-verify: cosmo-delete-verify.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) -o cosmo-delete-verify $< io.o $(DEP_FLAGS)
 

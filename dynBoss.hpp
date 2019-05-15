@@ -687,6 +687,34 @@ public:
       }
    }
 
+   bool _check_target( size_t pos,
+   		       symbol_type nodeSymbol,
+   		       symbol_type outSymbol,
+   		       size_t& idxIncoming ) {
+      //an edge was just inserted at pos, with outgoing symbol outSymbol,
+      //into a node with symbol nodeSymbol
+      
+      symbol_type& x = outSymbol;
+      if ( p_edges->rank( pos, x ) > 0 ) {
+   	 //get the preceding edge with x
+   	 idxIncoming = p_edges->select( p_edges->rank( pos, x ) - 1, x );
+   	 if ( _symbol_access( idxIncoming ) == nodeSymbol ) {
+	    
+
+	 }
+   	  
+      }
+
+      if ( p_edges->rank( pos + 1, x ) < p_edges->rank( num_edges(), x )) {
+   	 //get the succeeding edge with x
+   	 idxIncoming = p_edges->select( p_edges->rank( pos + 1, x ), x );
+   	 if ( _symbol_access( idxIncoming ) == nodeSymbol ) 
+   	    return true;
+      }
+
+      return false;
+   }
+   
    /*
     * @pos -- the first edge of the node to which this edge will be added
     * @x   -- the character of the outgoing edge
@@ -695,15 +723,19 @@ public:
     *         targetExists = true, and idxIncoming contains the index of
     *         the first edge incident with target
     */
-   size_t _add_edge_to_node( size_t pos, symbol_type x, bool targetExists = false, size_t idxIncoming = 0 ) {
-      
+   size_t _add_edge_to_node( size_t pos, symbol_type x, bool targetExists = false, size_t idxIncoming = 0, size_t* idxTarget = NULL ) {
       bool edge_added = false;
+      
+      //we need the character of this node
+      symbol_type y = _symbol_access( pos );
+      
       if ( p_edges->at(pos) == 0 ) {
 	 p_edges->remove(pos);
 	 p_edges->insert(pos, x);
 	 //for (symbol_type i = 0; i < sigma+1; ++i){
 	 //--m_symbol_ends[i];
 	 //}
+	 
       } else {
 
 	 //Find where within this node to insert the edge
@@ -733,7 +765,7 @@ public:
 	       return pos;
 	    }
 	 }
-	 
+
 	 edge_added = true;
 
 	 p_edges->insert( pos, x );
@@ -743,10 +775,7 @@ public:
 	 else
 	    p_node_flags->insert( pos + 1, 1 );
 
- 
-	 //update symbol counts
-	 symbol_type y = _symbol_access( startPos );
-
+ 	 
 	 for (symbol_type i = 0; i < sigma+1; ++i){
 	    if ( i >= (y)){
 	       ++m_symbol_ends[i];
@@ -763,7 +792,20 @@ public:
 
       //need to check if target node exists. If not, need to add an
       //empty edge to create it.
+      //      size_t idxIncomingTest;
+      //bool targetExistsTest = _check_target( pos,
+      //y,
+      //x,
+      //idxIncomingTest );
+      
       if (targetExists) {
+	 if (idxTarget != NULL) {
+	    if (*idxTarget >= pos) {
+	       if (edge_added)
+		  ++(*idxTarget);
+	    }
+	 }
+	 
 	 //need to determine if the newly added edge should have a minus flag.
 	 //if not, the idxIncoming needs to have a minux flag
 	 //this is decided simply by their relative order
@@ -784,7 +826,7 @@ public:
 	 //the position it should be at:
 	 size_t nodeTarget = p_node_flags->rank0( _symbol_start( x>>1 ) ) + p_edges->rank( pos + 1, x );
 
-	 size_t posTarget = _symbol_start( x >> 1 ) + p_edges->rank( pos, x );
+	 size_t posTarget = 0; // _symbol_start( x >> 1 ) + p_edges->rank( pos, x );
 
 	 if (nodeTarget > m_num_nodes) {
 	    posTarget = p_node_flags->size();
@@ -886,16 +928,17 @@ public:
    /*
     * removes the dummy chain ending at dummyLabel
     */
-   bool _remove_dummy_chain( std::string dummyLabel, bool removeTarget = false ) {
+   bool _remove_dummy_chain( std::string dummyLabel, bool removeTarget = false, size_t* targetIdPtr = NULL ) {
       size_t idx;
       bool rvalue = false;
+      size_t targetId;
       if (index_edge_alan( dummyLabel.begin(), idx ) ) {
 	 rvalue = true;
 	 vector< size_t > vDelete;
 	 vector< string > vEdgesToDelete;
-
+	 targetId = _forward( idx );
+	 
 	 if (removeTarget) {
-	    size_t targetId = _forward( idx );
 	    string targetLabel = dummyLabel.substr(1) + "$";
 	    vEdgesToDelete.push_back( targetLabel );
 	    vDelete.push_back( targetId );
@@ -905,6 +948,10 @@ public:
 	 size_t i = 0;
 	 while ( i < k - 1){
 
+	    if (start <= targetId) {
+	       --targetId;
+	    }
+	    
 	    size_t out = outdegree(_edge_to_node(start));
 	     
 	    //insert to maintain increasing order
@@ -941,7 +988,9 @@ public:
 
 	 }
 
-
+	 if (targetIdPtr != NULL) {
+	    *targetIdPtr = targetId;
+	 }
       }
 
       return rvalue;
@@ -1322,10 +1371,87 @@ public:
       return dSize;
    }
 
+
+   void add_read( std::vector< std::string >& kmers ) {
+      add_edge( kmers[0], false );
+      size_t idxSource;
+      index_alan( kmers[0].begin() + 1, idxSource );
+      for (size_t i = 0; i < kmers.size(); ++i) {
+	 idxSource = add_edge_given_position( kmers[i], idxSource );
+      }
+   }
+
+   //@rvalue: idx of target node of edge after addition
+   size_t add_edge_given_position( std::string kmer,
+				   size_t idxSource ) {
+
+      size_t idxTarget;
+      size_t indegTarget;
+      bool targetExists = false;
+      string::iterator in = kmer.begin();
+      size_t edgeStart = _node_to_edge(idxSource);
+      size_t outEdge;
+      char c;
+      
+      //The source exists and is located at edgeStart
+      dyn_boss::symbol_type x = _encode_symbol( kmer.back() ) << 1;
+      outEdge = _first_edge( edgeStart, x );
+      size_t dist = _rank_distance_alan( edgeStart, outEdge );
+      bool edge_added = false;
+      if (dist > 0 || outEdge == num_edges() ) {
+	 //hmm, let's try again with the minus flag
+      
+	 outEdge = _first_edge( edgeStart, x | 1);
+      
+	 size_t dist = _rank_distance_alan( edgeStart, outEdge );
+	 if (dist > 0 || outEdge == num_edges() ) {
+
+	    //the edge does not exist
+	    size_t idxIncoming;
+	    targetExists = index_alan( kmer.begin() + 1, idxTarget );
+	    
+	    if (targetExists) {
+	       
+	       
+	       idxTarget = _node_to_edge( idxTarget );
+	       idxIncoming = _backward( idxTarget  );
+	       
+	    }
+
+	    _add_edge_to_node( edgeStart, x, targetExists, idxIncoming, &idxTarget );
+	    edge_added = true;
+	 } else {
+	    //the edge already exists :/
+	    idxTarget = _forward( outEdge );
+	 }
+      } else {
+	 //the edge already exists :/
+	 idxTarget = _forward( outEdge ) ;
+      }
+
+      // DANGER WILL ROBINSON
+      // I have commented this out so idxTarget will be correct.
+      // However, dummies are no longer taken care of, which
+      // is ill-advised.
+      //If target has an incoming dummy, it is no longer necessary
+      if (targetExists && edge_added) {
+	 indegTarget = indegree( _edge_to_node( idxTarget ) );
+      	 if (indegTarget == 1) { //TODO: check to see if indegree is really working.
+      	    string incoming_dummy = '$'+ kmer.substr(1); //dummy edge
+      	    //remove dummy chain first checks if the dummy exists
+      	    _remove_dummy_chain( incoming_dummy, false, &idxTarget );
+      	 }
+      }
+
+      return _edge_to_node(idxTarget);
+
+   }
+   
    void add_edge (std::string kmer, bool add_reverse_complement = true ) {
       //First, check if the source, target nodes exist
       size_t idxTarget;
       size_t idxSource;
+      size_t indegTarget;
       bool sourceExists = index_alan( kmer.begin(), idxSource );
       bool targetExists = false;
       string::iterator in = kmer.begin();
@@ -1358,10 +1484,11 @@ public:
 	    targetExists = index_alan( kmer.begin() + 1, idxTarget );
 	 
 	    if (targetExists) {
-
+	       
+	       indegTarget = indegree( idxTarget );
 	       idxTarget = _node_to_edge( idxTarget );
 	       idxIncoming = _backward( idxTarget );
-
+	       
 	    }
 
 	    _add_edge_to_node( nodeStart, x, targetExists, idxIncoming );
@@ -1376,9 +1503,11 @@ public:
    
       //If target has an incoming dummy, it is no longer necessary
       if (targetExists && edge_added) {
-	 string incoming_dummy = '$'+ kmer.substr(1); //dummy edge
-      
-	 _remove_dummy_chain( incoming_dummy );
+	 if (indegTarget == 1) { //TODO: check to see if indegree is really working.
+	    string incoming_dummy = '$'+ kmer.substr(1); //dummy edge
+	    //remove dummy chain first checks if the dummy exists
+	    _remove_dummy_chain( incoming_dummy );
+	 }
       }
       
       if (add_reverse_complement) {
