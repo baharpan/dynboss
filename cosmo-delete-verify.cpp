@@ -84,7 +84,11 @@ void getKmers( size_t& nKmers,
    for (size_t i = 0; i < reads.size(); ++i) {
       string sline = reads[i];
       size_t read_length = sline.size();
-	   
+      for (size_t i = 0; i < read_length; ++i) {
+	 if (sline[i] == 'N')
+	    sline[i] = 'A';
+      }
+
       size_t nMers = read_length - k + 1;
       for (size_t start = 0; start < nMers; ++start) {
 	 string kmer = sline.substr( start, k );
@@ -134,7 +138,7 @@ int main(int argc, char* argv[]) {
   
   getKmers( nKmers, dbg.k, kmer_2, p );
 
-  cout << nKmers << " read.";
+  cout << nKmers << " read." << endl;
 
   clock_t t_start = clock();
   for (size_t i = 0; i < kmer_2.size();i++) {
@@ -144,8 +148,10 @@ int main(int argc, char* argv[]) {
 	   cerr << ((double)i) / kmer_2.size() * 100.0 << "%";
 	}
      }
+     
       
       if (!dbg.index_edge_alan( kmer_2[i].begin() )) {
+	 //	 cerr << "Adding " << kmer_2[i] << endl;
 	 dbg.add_edge(kmer_2[i]);
 	 kmers_added.push_back( kmer_2[i] );
       }

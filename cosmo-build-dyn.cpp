@@ -65,5 +65,16 @@ int main(int argc, char* argv[]) {
   //store_to_file(dbg, outfilename);
   ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
   dbg.serialize( ofs );
+
+  // for (size_t i = 0; i < dbg.num_edges(); ++i) {
+  //    cerr << dbg.edge_label( i ) << endl;
+  // }
+
+  // dbg._delete_edge_from_node( 0, "CACAC", false );
+
+  // for (size_t i = 0; i < dbg.num_edges(); ++i) {
+  //    cerr << dbg.edge_label( i ) << endl;
+  // }
+  
   ofs.close();
 }
