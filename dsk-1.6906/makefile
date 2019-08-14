@@ -25,6 +25,9 @@ ifeq ($(osx),1)
  CFLAGS+= -DOSX=1
 endif
 
+ifeq ($(canon),0)
+ CFLAGS+= -DNO_CANONICAL
+endif
 
 k := 0$(k) # dummy k if not specified 
 K_BELOW_32 := $(shell echo $(k)\<=32 | bc)

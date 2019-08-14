@@ -16,7 +16,8 @@ float load_factor = 0.7;
 
 bool separate_count = true ;  // count separately the multiple read sets, only works with use_hashing, needs define SEP and use_hashing=true
 
-bool use_compressed_reads = true ; // true; // write compressed read file
+//bool use_compressed_reads = true ; // true; // write compressed read file
+bool use_compressed_reads = false ; // true; // write compressed read file
 int optimism = 1; // optimism == 1 mean that we garantee worst case the memory usage, any value above assumes that, on average, a k-mer will be seen 'optimism' times
 
 bool output_histo;
@@ -407,6 +408,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 
                 if( use_compressed_reads) //current_pass >0 &&
                 {
+		   printf("HELP\n");
                     nbkmers = kbuff->nkmers;
                     kmer_table = kbuff->kmers_buffer;
                    // printf("nb kmers read  %lli \n",nbkmers);

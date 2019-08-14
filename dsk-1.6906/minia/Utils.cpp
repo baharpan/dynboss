@@ -336,7 +336,7 @@ void bloom_count(Bank *Reads, unsigned long max_memory)
 
     bloom_pass_reads(Reads,bloocpt2, bloocpt, (char*)"%cSecond pass %lld");
 
-STARTWALL(count);
+    STARTWALL(count);
 
     fprintf(stderr,"\n------------------ second pass  bloom counter   \n\n");
 

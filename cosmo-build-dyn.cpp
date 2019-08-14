@@ -66,9 +66,11 @@ int main(int argc, char* argv[]) {
   ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
   dbg.serialize( ofs );
 
-  // for (size_t i = 0; i < dbg.num_edges(); ++i) {
-  //    cerr << dbg.edge_label( i ) << endl;
-  // }
+  if (dbg.num_edges() < 30) {
+     for (size_t i = 0; i < dbg.num_edges(); ++i) {
+	cerr << dbg.edge_label( i ) << endl;
+     }
+  }
 
   // dbg._delete_edge_from_node( 0, "CACAC", false );
 

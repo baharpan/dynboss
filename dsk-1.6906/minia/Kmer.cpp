@@ -289,7 +289,7 @@ kmer_type next_kmer(kmer_type graine, int added_nt, int *strand)
     kmer_type temp_graine;
 
     if (strand != NULL && *strand == 1)// the kmer we're extending is actually a revcomp sequence in the bidirected debruijn graph node
-        temp_graine = revcomp(graine);
+       temp_graine = revcomp(graine);
     else
         temp_graine = graine;
 
