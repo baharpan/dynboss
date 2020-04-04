@@ -1,3 +1,4 @@
+This repository will be updated soon.
 # Dynamic BOSS
 Dynamic succinct de Bruijn graph
 
