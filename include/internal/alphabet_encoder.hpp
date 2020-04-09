@@ -22,7 +22,6 @@
 #define INCLUDE_INTERNAL_ALPHABET_ENCODER_HPP_
 
 #include "includes.hpp"
-#include <map>
 
 namespace dyn {
 
@@ -121,7 +120,7 @@ public:
 	 * new coming characters
 	 *
 	 */
-	vector<bool> encode(char_type c){
+	const vector<bool>& encode(char_type c) {
 
 		auto code = encode_[c];
 
@@ -153,33 +152,46 @@ public:
 
 	}
 
-	char_type decode(vector<bool>& code){
+    const vector<bool>& encode_existing(char_type c) const {
+        return encode_.at(c);
+    }
+
+	char_type decode(const vector<bool>& code) const {
 
 		//code must be present in dictionary!
-		assert(decode_[code]!=0);
+		assert(decode_.at(code)!=0);
 
-		return decode_[code]-1;
-
-	}
-
-	bool code_exists(vector<bool>& code){
-
-		return decode_[code]!=0;
+		return decode_.at(code)-1;
 
 	}
 
-	bool char_exists(char_type c){
+	bool code_exists(const vector<bool>& code) const {
 
-		return encode_[c].size()>0;
+		return decode_.at(code)!=0;
+
+	}
+
+	bool char_exists(char_type c) const {
+
+		return encode_.find(c) != encode_.end() && encode_.at(c).size()>0;
 
 	}
 
 	/*
 	 * alphabet size
 	 */
-	uint64_t size(){
-		return sigma;
+	uint64_t size() const {
+           return enc_type==fixed ? 1ull<<log_sigma : sigma;
 	}
+
+        set<char_type> keys() const {
+           set<char_type> keys;
+           for(char_type c = 0; c < size(); ++c) {
+              if (char_exists(c) || enc_type==fixed)
+                 keys.insert(c);
+           }
+           return keys;
+        }
 
 	/*
 	 * Total number of bits allocated in RAM for this structure
@@ -190,7 +202,7 @@ public:
 	 * to the alphabet size (but the constants involved are high since internally
 	 * they can use heavy structures as RBT)
 	 */
-	ulint bit_size(){
+	ulint bit_size() const {
 
 		ulint size = 0;
 
@@ -210,7 +222,7 @@ public:
 
 	}
 
-	ulint serialize(ostream &out) {
+	ulint serialize(ostream &out) const {
 
 		ulint w_bytes=0;
 		ulint encode_size = encode_.size();
@@ -223,7 +235,7 @@ public:
 		out.write((char*)&decode_size,sizeof(decode_size));
 		w_bytes += sizeof(decode_size);
 
-		for(map<char_type,vector<bool> >::value_type e : encode_){
+		for(const auto& e : encode_){
 
 			out.write((char*)&e.first,sizeof(e.first));
 			w_bytes += sizeof(e.first);
@@ -233,7 +245,7 @@ public:
 
 		}
 
-		for(map<vector<bool>, char_type>::value_type d : decode_){
+		for(const auto& d : decode_){
 
 			auto B = d.first;
 			w_bytes += serialize_vec_bool(out, B);
@@ -298,7 +310,7 @@ public:
 
 private:
 
-	ulint serialize_vec_bool(ostream &out, vector<bool>& vb) {
+	ulint serialize_vec_bool(ostream &out, const vector<bool>& vb) const {
 
 		ulint size = vb.size();
 		ulint n_words = (size/64) + (size%64 != 0);
@@ -385,7 +397,7 @@ private:
 
 	};
 
-	void extract_codes(node* n, vector<bool> C){
+	void extract_codes(node* n, const vector<bool>& C){
 
 		if(is_leaf(n)){
 
@@ -486,10 +498,10 @@ private:
 
 
 
-	map<char_type,vector<bool> > encode_;
+    tsl::hopscotch_map<char_type,vector<bool> > encode_;
 
 	//char_type value 0 is reserved
-	map<vector<bool>, char_type> decode_;
+    tsl::hopscotch_map<vector<bool>, char_type> decode_;
 
 	uint64_t sigma;
 

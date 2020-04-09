@@ -20,7 +20,8 @@
 #include <internal/bwt.hpp>
 #include <internal/sparse_vector.hpp>
 #include <internal/packed_vector.hpp>
-//#include <internal/packed_array.hpp>
+#include <internal/hacked_vector.hpp>
+#include <internal/lciv.hpp>
 #include <internal/wt_string.hpp>
 #include <internal/fm_index.hpp>
 
@@ -31,13 +32,14 @@ namespace dyn{
  * B trees. Logarithmic-sized leaves
  */
 typedef spsi<packed_vector,256,16> packed_spsi;
+typedef lciv<packed_vector,256,16> packed_lciv;
 
 /*
  * a succinct searchable partial sum with inserts implemented with cache-efficient
  * B trees. Quadratic-log sized leaves
  */
 typedef spsi<packed_vector,8192,16> succinct_spsi;
-
+typedef lciv<packed_vector,8192,16> succinct_lciv;
 
 /*
  * dynamic gap-encoded bitvector
@@ -47,7 +49,7 @@ typedef gap_bitvector<packed_spsi> gap_bv;
 /*
  * dynamic succinct bitvector (about 1.1n bits)
  */
-typedef succinct_bitvector<succinct_spsi> suc_bv;
+typedef succinct_bitvector<spsi<packed_bit_vector,8192,16>> suc_bv;
 
 /*
  * succinct/compressed dynamic string implemented with wavelet trees.
@@ -136,14 +138,14 @@ typedef rle_string<bv_check, str_check> rle_str_check;
  */
 template<>
 inline
-void rle_bwt::build_from_string(string& bwt, char_type terminator, bool verbose){
+void rle_bwt::build_from_string(string& bwt, char terminator, bool verbose){
 
-	long int step = 1000000;	//print status every step characters
-	long int last_step = 0;
+	const ulint step = 1000000;	//print status every step characters
+	ulint last_step = 0;
 
 	terminator_position = bwt.size();
 
-	char_type c = bwt[0];
+	char c = bwt[0];
 	ulint k=1;
 
 	for(ulint i=1; i<bwt.size();++i){
@@ -219,7 +221,7 @@ ulint rle_bwt::number_of_runs(){
 
 template<>
 inline
-ulint rle_bwt::number_of_runs(pair<ulint,ulint> interval){
+ulint rle_bwt::number_of_runs(pair<ulint,ulint> interval) const {
 
 	//coordinates on BWT with terminator
 	auto l1 = interval.first;
@@ -240,7 +242,7 @@ ulint rle_bwt::number_of_runs(pair<ulint,ulint> interval){
 			L.number_of_runs({l2,r2}) :
 				terminator_position == l1 or terminator_position == r1-1 ?
 				L.number_of_runs({l2,r2})+1 :
-					L[terminator_position-1] == L[terminator_position] ?
+                L.at(terminator_position-1) == L.at(terminator_position) ?
 					L.number_of_runs({l2,r2})+2 :
 					L.number_of_runs({l2,r2})+1;
 
@@ -252,7 +254,7 @@ ulint rle_bwt::number_of_runs(pair<ulint,ulint> interval){
  */
 template<>
 inline
-pair<ulint,ulint> rle_bwt::locate_run(ulint i){
+pair<ulint,ulint> rle_bwt::locate_run(ulint i) const {
 
 	assert(i<bwt_length());
 

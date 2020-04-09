@@ -13,17 +13,18 @@
 #define INCLUDES_HPP_
 
 
-#include "stdint.h"
+#include <cstdint>
 #include <string>
 #include <iostream>
 #include <set>
+#include <map>
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <cassert>
-#include <map>
 #include <cmath>
 #include <algorithm>
+#include <tsl/hopscotch_map.h>
 
 #define WORD_SIZE 64;
 
@@ -31,6 +32,7 @@ using namespace std;
 
 typedef unsigned char uchar;
 typedef uint64_t ulint;
+typedef uint32_t uint;
 
 typedef unsigned char symbol;
 typedef pair<uint64_t,uint64_t> range_t;
