@@ -20,7 +20,7 @@ sudo apt-get install libtclap-dev
 ### Dynamic BOSS
 Update the paths on Makefile (unnecessary if dependencies installed on a Debian-based system as described above).
 ```
-make
+make revcomps=0
 ```
 ### DSK
 ```
