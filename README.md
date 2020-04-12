@@ -25,7 +25,13 @@ make
 ### DSK
 ```
 cd dsk-1.6906
-make k=64
+
+#for Max kmer size 32:
+make dsk canon=0
+
+#for larger kmer size like 64:
+make dsk k=64 canon=0
+
 ```
 DSK supports larger `k` than `64`, but currently this is the largest value supported by our implementation.
 ## Building the data structure
