@@ -1,23 +1,17 @@
 #include <iostream>
 #include <fstream>
-
 #include <libgen.h> // basename
-
 #include "tclap/CmdLine.h"
-
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/wavelet_trees.hpp>
-
 #include "io.hpp"
-#ifdef DYNAMIC
 #include "dynBoss.hpp"
-#else
-#include "debruijn_graph.hpp"
-#endif
 #include "algorithm.hpp"
-
 using namespace std;
 using namespace sdsl;
+
+/*This code builds the DynamicBOSS from .packed file.
+usage: ./cosmo-build-dyn <.packed file>*/
 
 string extension = ".dbg";
 
@@ -45,12 +39,9 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 int main(int argc, char* argv[]) {
   parameters_t p;
   parse_arguments(argc, argv, p);
-
   ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
-
   dyn_boss dbg;
   dbg.load_from_packed_edges( input, "$ACGT" );
-
   input.close();
 
   cerr << "k             : " << dbg.k << endl;
@@ -65,18 +56,5 @@ int main(int argc, char* argv[]) {
   //store_to_file(dbg, outfilename);
   ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
   dbg.serialize( ofs );
-
-  if (dbg.num_edges() < 30) {
-     for (size_t i = 0; i < dbg.num_edges(); ++i) {
-	cerr << dbg.edge_label( i ) << endl;
-     }
-  }
-
-  // dbg._delete_edge_from_node( 0, "CACAC", false );
-
-  // for (size_t i = 0; i < dbg.num_edges(); ++i) {
-  //    cerr << dbg.edge_label( i ) << endl;
-  // }
-  
   ofs.close();
 }
