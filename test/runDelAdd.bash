@@ -1,48 +1,15 @@
 
-dsk="../dsk-1.6906/dsk"
-CosmoPack="../cosmo-pack"
 cosmodel="../cosmo-delete-add"
-k=8
+k=31
 
-#OutFile = "./cmpResultsCosmoBowe.txt"
-
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 <fastafilebase>"
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <.dbg file> <number of kmers to delete and add>"
     exit
 fi
 
-fnamebase="$1"
-fileFasta="$1.fasta"
+graph="$1"
+numKmers="$2"
 
-cmd="$dsk $fileFasta $k"
+cmd="$cosmodel $graph $numKmers"
 echo $cmd
 $cmd
-
-fileKmer="${fnamebase}.solid_kmers_binary";
-filePacked="${fnamebase}.solid_kmers_binary.packed";
-
-cmd="$CosmoPack $fileKmer"
-echo $cmd
-$cmd
-
-# cmd="cat $fileFasta $fileFasta2" 
-# echo $cmd 
-# $cmd > merged.fasta
-
-# cmd="$dsk merged.fasta $k"
-# echo $cmd
-# $cmd
-
-# fileKmer2="merged.solid_kmers_binary";
-# filePacked2="merged.solid_kmers_binary.packed";
-
-# cmd="$CosmoPack $fileKmer2"
-# echo $cmd
-# $cmd
-
-cmd="$cosmodel $filePacked"
-echo $cmd
-$cmd
-
-
-
