@@ -32,9 +32,9 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 {
    TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
    TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".packed edge file (output from pack-edges).", true, "", "input_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
    TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
-            "kmers to add in plain text. One per line.", true, "", "input_file", cmd);
+            "kmers to add in .fasta format.", true, "", "input_file", cmd);
    string output_short_form = "output_prefix";
    TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
 						  "Output prefix. Graph will be written to [" + output_short_form + "]" + extension + ". " +
@@ -87,8 +87,9 @@ void getKmers( size_t& nKmers,
 
       size_t nMers = read_length - k + 1;
       for (size_t start = 0; start < nMers; ++start) {
-	 string kmer = sline.substr( start, k );
-	 kmers.push_back( kmer );
+	       string kmer = sline.substr( start, k );
+         if (find(kmers.begin(), kmers.end(), kmer) == kmers.end())
+	           kmers.push_back( kmer );
       }
    }
 
