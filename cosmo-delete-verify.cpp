@@ -1,24 +1,21 @@
 #include <iostream>
 #include <fstream>
-
 #include <libgen.h> // basename
-
 #include "tclap/CmdLine.h"
-
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/wavelet_trees.hpp>
-
-
 #include "io.hpp"
-
 #include "dynBoss.hpp"
-
 #include "algorithm.hpp"
 #include "utility.hpp"
 #include "formatutil.cpp"
-
 using namespace std;
 using namespace sdsl;
+
+/*This code adds k-mers from a FASTA file into the DynamicBOSS with add-edge
+then deletes them with delete-edge and confirms that the starting and
+final graphs are the same.
+usage: ./cosmo-delete-verify <.dbg file> <.fasta file>*/
 
 static char base[] = {'$','A','C','G','T'};
 
@@ -27,14 +24,13 @@ string extension = ".dbg";
 struct parameters_t {
    std::string input_filename = "";
    std::string kmer_filename = "";
-   std::string input2_filename = "";
    std::string output_prefix = "";
 };
 
 void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
-   TCLAP::CmdLine cmd("Dynamic BOSS. Copyright (c) Bahar Alipanahi, Alex Bowe, Alan Kuhnle 2019", ' ', VERSION);
+   TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
    TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
             ".packed edge file (output from pack-edges).", true, "", "input_file", cmd);
    TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
@@ -74,13 +70,13 @@ void getKmers( size_t& nKmers,
       } else {
 	 read += vline[pos];
       }
-      
+
       ++pos;
    } while (pos != vline.size());
 
    if (!read.empty()) //handle the last read
       reads.push_back( read );
-   
+
    for (size_t i = 0; i < reads.size(); ++i) {
       string sline = reads[i];
       size_t read_length = sline.size();
@@ -104,12 +100,12 @@ int main(int argc, char* argv[]) {
   parameters_t p;
   parse_arguments(argc, argv, p);
 
+  cerr<<"Loading DynamicBOSS from file:  "<<p.input_filename<<endl;
   dyn_boss sdbg;
-  
-  cout << "Constructing dynamic BOSS from DSK input..." << endl;
   ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
-
-  sdbg.load_from_packed_edges( input, "$ACGT" );
+  load_from_file(sdbg, p.input_filename);
+  //cout << "Constructing dynamic BOSS from DSK input..." << endl;
+  //sdbg.load_from_packed_edges( input, "$ACGT" );
   input.close();
   cout << "graph info: " << endl;
   cout << "k             : " << sdbg.k << endl;
@@ -121,63 +117,47 @@ int main(int argc, char* argv[]) {
   //cout << "matrix:\n";
   //  sdbg.print_boss_matrix( cerr );
   cout << "===============================\n";
-  cout << "Building second dbg...\n";
 
-  dyn_boss dbg;
-  cout << "Constructing dynamic BOSS from DSK input..." << endl;
-  input.clear();
-  input.open(p.input_filename, ios::in|ios::binary|ios::ate);
-
-  dbg.load_from_packed_edges( input, "$ACGT" );
-  input.close();
-  
-  cout << "Reading k-mers to add from FASTA file..." << endl;
+  dyn_boss dbg = sdbg;
+  cout << "Reading FASTA file " <<p.kmer_filename<< endl;
   size_t nKmers;
   vector<string> kmer_2;
   vector<string> kmers_added;
-  
+
   getKmers( nKmers, dbg.k, kmer_2, p );
+  cout << nKmers << " kmers were counted " << endl;
 
-  cout << nKmers << " read." << endl;
-
-  clock_t t_start = clock();
+  cout<<"finding the kmers that are not already in the graph ..."<<endl;
   for (size_t i = 0; i < kmer_2.size();i++) {
-     if (kmer_2.size() > 100) {
-	if ( i % (kmer_2.size() / 100) == 0 ) {
-	   cerr << "\r                                            \r";
-	   cerr << ((double)i) / kmer_2.size() * 100.0 << "%";
-	}
-     }
-     
-      
       if (!dbg.index_edge_alan( kmer_2[i].begin() )) {
-	 //	 cerr << "Adding " << kmer_2[i] << endl;
-	 dbg.add_edge(kmer_2[i]);
-	 kmers_added.push_back( kmer_2[i] );
+         kmers_added.push_back( kmer_2[i] );
       }
   }
+  cout << "Start adding kmers ... "<<endl;
+  clock_t t_start = clock();
+
+  for (size_t i = 0; i < kmers_added.size();i++) {
+       dbg.add_edge(kmers_added[i]);
+   }
 
   double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-  cerr << "\r                                            \r";
-  cerr << "100%\n";
+  cout << "Time per Additions (s): " << t_elapsed / kmers_added.size() << endl;
   cout << "DONE with addition of " << kmers_added.size() << " kmers.\n";
   cout << "The remainder were already in the graph." << endl;
-  kmer_2.swap( kmers_added );
-  cout << "Beginning deletion of the added k-mers..." << endl;
+
+
+
+  cout << "Start deleting the added k-mers ..." << endl;
+
   t_start = clock();
-  for (size_t i = 0; i < kmer_2.size();i++) {
-     if (kmer_2.size() > 100) {
-	if ( i % (kmer_2.size() / 100) == 0 ) {
-	   cerr << "\r                                            \r";
-	   cerr << ((double)i) / kmer_2.size() * 100.0 << "%";
-	}
-     }
-      
-     dbg.delete_edge(kmer_2[i]);
+
+  for (size_t i = 0; i < kmers_added.size();i++) {
+     dbg.delete_edge(kmers_added[i]);
   }
+
   t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-  cout << "Time per Deletion (s): " << t_elapsed / kmer_2.size() << endl;
-  
+  cout << "Time per Deletion (s): " << t_elapsed / kmers_added.size() << endl;
+
 
   cout << "===============================\n";
   cout << "final graph   : " << endl;
@@ -187,11 +167,10 @@ int main(int argc, char* argv[]) {
   bs = dbg.bit_size();
   cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
   cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
-  //cout << "matrix:\n";
-  //  dbg.print_boss_matrix( cerr );
+
   cout << "===============================\n";
   cout << "Beginning graph validation...\n";
-  
+
   cout << "Verifying edges..." << endl;
   for (size_t i = 0; i < dbg.num_edges(); i+= 1) {
      if (dbg.edge_label(i) != sdbg.edge_label(i)) {
