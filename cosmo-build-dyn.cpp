@@ -23,7 +23,7 @@ struct parameters_t {
 void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
-  TCLAP::CmdLine cmd("Cosmo Copyright (c) Alex Bowe (alexbowe.com) 2014", ' ', VERSION);
+  TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
             ".packed edge file (output from pack-edges).", true, "", "input_file", cmd);
   string output_short_form = "output_prefix";

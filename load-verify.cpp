@@ -26,7 +26,7 @@ struct parameters_t {
 void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
-  TCLAP::CmdLine cmd("Cosmo Copyright (c) Alex Bowe (alexbowe.com) 2014", ' ', VERSION);
+  TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
             ".packed edge file (output from cosmo-pack).", true, "", "input_file", cmd);
   TCLAP::UnlabeledValueArg<std::string> graph_filename_arg("graph",
@@ -67,12 +67,12 @@ int main(int argc, char* argv[]) {
   ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
   size_t sizeOFgraph =  dbg.serialize( ofs );
   //cout<<"Size in Disk  : "<<sizeOFgraph/ 1000000 << " MB" <<endl;
-  cerr<<"Writing the dynamic graph in file:  "<<outfilename.c_str()<<endl;
+  cerr<<"Writing DynamicBOSS in file:  "<<outfilename.c_str()<<endl;
   ofs.close();
 
 
   dyn_boss dbg2;
-  cerr<<"Loading the dynamic graph from file:  "<<p.graph_filename<<endl;
+  cerr<<"Loading DynamicBOSS from file:  "<<p.graph_filename<<endl;
   load_from_file(dbg2, p.graph_filename);
 
 
