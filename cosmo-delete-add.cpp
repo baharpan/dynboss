@@ -1,39 +1,39 @@
 #include <iostream>
 #include <fstream>
-
 #include <libgen.h> // basename
-
 #include "tclap/CmdLine.h"
-
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/wavelet_trees.hpp>
-
-
 #include "io.hpp"
-
 #include "dynBoss.hpp"
-
 #include "algorithm.hpp"
 #include "utility.hpp"
 #include "formatutil.cpp"
 using namespace std;
 using namespace sdsl;
 
-static char base[] = {'$','A','C','G','T'};
+/*This code deletes random edges of the DynamicBOSS with delete_edge, and then add
+them back to the graph with add_edge and confirms that the starting and
+final graphs are the same.
+usage: ./cosmo-delete-add <.dbg file> <number of random edges to delete and add>*/
 
+static char base[] = {'$','A','C','G','T'};
 string extension = ".dbg";
 
 struct parameters_t {
   std::string input_filename = "";
   std::string output_prefix = "";
+  std::string number_of_kmers = "";
 };
 void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
-  TCLAP::CmdLine cmd("Cosmo Copyright (c) Alex Bowe (alexbowe.com) 2014", ' ', VERSION);
+  TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".packed edge file (output from pack-edges).", true, "", "input_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
   string output_short_form = "output_prefix";
+  TCLAP::UnlabeledValueArg<std::string> number_of_kmers_arg("num_kmers",
+            "number of kmers to process dynamically", true, "", "number_of_kmers", cmd);
   TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
             "Output prefix. Graph will be written to [" + output_short_form + "]" + extension + ". " +
             "Default prefix: basename(input_file).", false, "", output_short_form, cmd);
@@ -41,152 +41,163 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 
   params.input_filename  = input_filename_arg.getValue();
   params.output_prefix   = output_prefix_arg.getValue();
+  params.number_of_kmers   = number_of_kmers_arg.getValue();
 }
 
 
 
 int main(int argc, char* argv[]) {
-  parameters_t p;
-  parse_arguments(argc, argv, p);
+    parameters_t p;
+    parse_arguments(argc, argv, p);
 
-    cerr << "Constructing dynamic BOSS..." << endl;
-  ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
+    cout<<"Loading DynamicBOSS from file:  "<<p.input_filename<<endl;
     dyn_boss dbg;
-    dbg.load_from_packed_edges( input, "$ACGT" );
+    ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
+    load_from_file(dbg, p.input_filename);
+
+    //cout << "Constructing dynamic BOSS..." << endl;
+    //ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
+    //dyn_boss dbg;
+    //dbg.load_from_packed_edges( input, "$ACGT" );
+
     input.close();
-    cerr << "original graph: " << endl;
-    cerr << "k             : " << dbg.k << endl;
-    cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
-    cerr << "num_edges()   : " << dbg.num_edges() << endl;
+    cout << "original graph: " << endl;
+    cout << "k             : " << dbg.k << endl;
+    cout << "num_nodes()   : " << dbg.num_nodes() << endl;
+    cout << "num_edges()   : " << dbg.num_edges() << endl;
     size_t bs = dbg.bit_size();
-    cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
-    cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+    cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+    cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+    cout << "===============================\n";
+
     dyn_boss sdbg = dbg;
-
-
     static const char alphanum[] = "ACGT";
     vector<string>all_kmers;
     int stringLength = sizeof(alphanum) - 1;
 
-    size_t nOps = 10000;
-
+    size_t nOps = stoi(p.number_of_kmers) ;
+    cout<<"Selecting "<<nOps<<" random edges to delete from the DynamicBOSS ..."<<endl;
     while (all_kmers.size() < nOps ){
-       
        size_t pos;
        string kmer;
        do {
 	  pos = rand() % dbg.num_edges();
 	  kmer = dbg.edge_label( pos );
        } while ( kmer.find('$') != string::npos );
-       
+
        all_kmers.push_back(kmer);
     }
 
-    cerr << "number of kmers to delete: " << all_kmers.size()<<endl;
-    cerr << "Beginning deletion..." << endl;
+    cout << "Beginning deletion..." << endl;
+
     clock_t t_start = clock();
-    
     for (size_t i = 0; i< all_kmers.size();i++){
-       if (all_kmers.size() > 100) {
-	if ( i % (all_kmers.size() / 100) == 0 ) {
-	   cerr << "\r                                            \r";
-	   cerr << ((double)i) / all_kmers.size() * 100.0 << "%";
-	}
-     }
        dbg.delete_edge( all_kmers[i]);
     }
-
     double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
 
-    cerr << "DONE with deletion of all kmers\n";
+    cout << "DONE with deletion of all kmers\n";
+    cout << "Time per Op: " << t_elapsed / nOps << endl;
 
-    cerr << "Time per Op: " << t_elapsed / nOps << endl;
     t_start = clock();
     for (size_t i = 0; i< all_kmers.size();i++){
-       if (all_kmers.size() > 100) {
-	  if ( i % (all_kmers.size() / 100) == 0 ) {
-	     cerr << "\r                                            \r";
-	     cerr << ((double)i) / all_kmers.size() * 100.0 << "%";
-	  }
-       }
        dbg.add_edge(all_kmers[i]);
     }
-
     t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
-    cerr << "DONE with addition of all kmers\n";
-    cerr << "Time per Op: " << t_elapsed / nOps << endl;
-    cerr << "===============================\n";
-    cerr << "new greph     : " << endl;
-    cerr << "k             : " << dbg.k << endl;
-    cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
-    cerr << "num_edges()   : " << dbg.num_edges() << endl;
+
+    cout << "DONE with addition of all kmers\n";
+    cout << "Time per Op: " << t_elapsed / nOps << endl;
+
+    cout << "===============================\n";
+    cout << "new greph     : " << endl;
+    cout << "k             : " << dbg.k << endl;
+    cout << "num_nodes()   : " << dbg.num_nodes() << endl;
+    cout << "num_edges()   : " << dbg.num_edges() << endl;
     bs = dbg.bit_size();
-    cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
-    cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+    cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+    cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
-  /*   for (size_t i = 0; i<dbg.num_edges(); i++)
-         cout<<dbg.edge_label(i)<< " " <<i<<endl;
+    cout << "Beginning graph validation...\n";
 
-     for (size_t i=0; i < dbg.num_nodes();i++)
-         cout<<dbg.node_label(i)<< " " <<i<<endl;*/
-    size_t nVerify = 1000;
-    cerr << "Verifying edges..." << endl;
-  for (size_t i = 0; i < dbg.num_edges(); i+=dbg.num_edges()/nVerify) {
-     if (dbg.edge_label(i) != sdbg.edge_label(i)) {
-	cerr << "Edge verification failed.\n";
-	exit(0);
-     }
-  }
+    cout << "Verifying edges..." << endl;
+    for (size_t i = 0; i < dbg.num_edges(); i+= 1) {
+       if (dbg.edge_label(i) != sdbg.edge_label(i)) {
+    cout << "Edge verification failed.\n";
+    size_t j = i;
+    while (dbg.edge_label(j)[0] == '$') {
+       j = dbg._forward( j );
+    }
 
-  cerr << "Verifying nodes..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nVerify) {
-     if (dbg.node_label(i) != sdbg.node_label(i)) {
-	cerr << "Node verification failed.\n";
-	exit(0);
-     }
-  }
+    cout << "The edge at index\n"
+         << j << "\nwith indegree\n"
+         << dbg.indegree( j )
+         << "\n and label\n"
+         << dbg.edge_label(j)
+         << "\n has an incoming dummy string.\n";
+    cout << "backward: " << dbg.edge_label(dbg._backward( j )) << endl;
 
-  cerr << "Verifying outdegree..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nVerify) {
-     if ( dbg.outdegree( i ) != sdbg.outdegree(i) ) {
-	cerr << "outdegree verification failed.\n";
-	exit(0);
-     }
-  }
+    size_t idxj;
+    if (sdbg.index_edge_alan( dbg.edge_label(j).begin(), idxj )) {
+       cout << "This edge is at " << idxj << " in static graph.\n";
+       cout << "It has label\n"
+      << sdbg.edge_label( idxj ) << '\n';
+       cout << "backward: " << sdbg.edge_label(sdbg._backward( idxj )) << endl;
+    } else {
+       cout << "This edge is not present in sdbg.\n";
+    }
+    exit(0);
+       }
+    }
 
-  cerr << "Verifying indegree..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nVerify) {
-     if (dbg.indegree( i ) != sdbg.indegree(i)) {
-	cerr << "indegree verification failed.\n";
-	exit(0);
-     }
-  }
+    cout << "Verifying nodes..." << endl;
+    for (size_t i = 0; i < dbg.num_nodes(); i+=1) {
+       if (dbg.node_label(i) != sdbg.node_label(i)) {
+    cout << "Node verification failed.\n";
+    exit(0);
+       }
+    }
 
-  cerr << "Verifying incoming..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/nVerify) {
-     for (uint64_t j = 0; j < 5; ++j) {
-  	//cerr << i << ".incoming(" << j << "): " << dbg.incoming(i, j) << endl;
-	if (dbg.incoming( i,j ) != sdbg.incoming(i,j)) {
-	   cerr << "incoming verification failed.\n";
-	   exit(0);
-	}
+    cout << "Verifying outdegree..." << endl;
+    for (size_t i = 0; i < dbg.num_nodes(); i+= 1) {
+       if ( dbg.outdegree( i ) != sdbg.outdegree(i) ) {
+    cout << "outdegree verification failed.\n";
+    exit(0);
+       }
+    }
 
-     }
-  }
+    cout << "Verifying indegree..." << endl;
+    for (size_t i = 0; i < dbg.num_nodes(); i+= 1) {
+       if (dbg.indegree( i ) != sdbg.indegree(i)) {
+    cout << "indegree verification failed.\n";
+    exit(0);
+       }
+    }
 
-  cerr << "Verifying outgoing..." << endl;
-  for (size_t i = 0; i < dbg.num_nodes(); i+=dbg.num_nodes()/5) {
-     for (uint64_t j = 0; j < 5; ++j) {
-  	//cerr << i << ".incoming(" << j << "): " << dbg.incoming(i, j) << endl;
-	if (dbg.outgoing( i,j ) != sdbg.outgoing(i,j)) {
-	   cerr << "outgoing verification failed.\n";
-	   exit(0);
-	}
+    cout << "Verifying incoming..." << endl;
+    for (size_t i = 0; i < dbg.num_nodes(); i+= 1) {
+       for (uint64_t j = 0; j < 5; ++j) {
+      //cout << i << ".incoming(" << j << "): " << dbg.incoming(i, j) << endl;
+    if (dbg.incoming( i,j ) != sdbg.incoming(i,j)) {
+       cout << "incoming verification failed.\n";
+       exit(0);
+    }
 
-     }
-  }
+       }
+    }
 
-cerr << "Verification passed!\n";
-//cerr << "===============================\n";
+    cout << "Verifying outgoing..." << endl;
+    for (size_t i = 0; i < dbg.num_nodes(); ++i) {
+       for (uint64_t j = 0; j < 5; ++j) {
+      //cout << i << ".incoming(" << j << "): " << dbg.incoming(i, j) << endl;
+    if (dbg.outgoing( i,j ) != sdbg.outgoing(i,j)) {
+       cout << "outgoing verification failed.\n";
+       exit(0);
+    }
 
-}
+       }
+    }
+
+    cout << "Verification passed!\n";
+
+    return 0;
+    }
