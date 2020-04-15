@@ -17,14 +17,12 @@ then deletes them with delete-edge and confirms that the starting and
 final graphs are the same.
 usage: ./cosmo-delete-verify <.dbg file> <.fasta file>*/
 
-static char base[] = {'$','A','C','G','T'};
 
 string extension = ".dbg";
 
 struct parameters_t {
    std::string input_filename = "";
    std::string kmer_filename = "";
-   std::string output_prefix = "";
 };
 
 void parse_arguments(int argc, char **argv, parameters_t & params);
@@ -34,21 +32,17 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
    TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
             ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
    TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
-            "kmers to add in .fasta format.", true, "", "input_file", cmd);
-   string output_short_form = "output_prefix";
-   TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
-						  "Output prefix. Graph will be written to [" + output_short_form + "]" + extension + ". " +
-						  "Default prefix: basename(input_file).", false, "", output_short_form, cmd);
+            ".fasta file to count kmers to add and delete.", true, "", "input_file", cmd);
+
    cmd.parse( argc, argv );
 
    params.input_filename  = input_filename_arg.getValue();
    params.kmer_filename  = kmer_filename_arg.getValue();
-   params.output_prefix   = output_prefix_arg.getValue();
 }
 
 void getKmers( size_t& nKmers,
 	       size_t k,
-	       vector< string >& kmers,
+	       set< string >& kmers,
 	       parameters_t& p) {
    ifstream in(p.kmer_filename );
    string sline;
@@ -88,8 +82,7 @@ void getKmers( size_t& nKmers,
       size_t nMers = read_length - k + 1;
       for (size_t start = 0; start < nMers; ++start) {
 	       string kmer = sline.substr( start, k );
-         if (find(kmers.begin(), kmers.end(), kmer) == kmers.end())
-	           kmers.push_back( kmer );
+	           kmers.insert( kmer );
       }
    }
 
@@ -122,18 +115,21 @@ int main(int argc, char* argv[]) {
   dyn_boss dbg = sdbg;
   cout << "Reading FASTA file " <<p.kmer_filename<< endl;
   size_t nKmers;
-  vector<string> kmer_2;
+  set<string> kmer_2;
   vector<string> kmers_added;
 
   getKmers( nKmers, dbg.k, kmer_2, p );
-  cout << nKmers << " kmers were counted " << endl;
+  cout << nKmers << " distinct kmers were counted " << endl;
 
   cout<<"finding the kmers that are not already in the graph ..."<<endl;
-  for (size_t i = 0; i < kmer_2.size();i++) {
-      if (!dbg.index_edge_alan( kmer_2[i].begin() )) {
-         kmers_added.push_back( kmer_2[i] );
+  for (auto it = kmer_2.begin(); it != kmer_2.end(); ++it) {
+      string kmer = *it;
+      if (!dbg.index_edge_alan( kmer.begin() )) {
+         kmers_added.push_back( kmer );
       }
   }
+
+  cout << "===============================\n";
   cout << "Start adding kmers ... "<<endl;
   clock_t t_start = clock();
 
@@ -144,10 +140,10 @@ int main(int argc, char* argv[]) {
   double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
   cout << "Time per Additions (s): " << t_elapsed / kmers_added.size() << endl;
   cout << "DONE with addition of " << kmers_added.size() << " kmers.\n";
-  cout << "The remainder were already in the graph." << endl;
+  cout << "The remainder (if any) were already in the graph." << endl;
 
 
-
+  cout << "===============================\n";
   cout << "Start deleting the added k-mers ..." << endl;
 
   t_start = clock();
@@ -170,7 +166,7 @@ int main(int argc, char* argv[]) {
   cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
   cout << "===============================\n";
-  cout << "Beginning graph validation...\n";
+  cout << "Beginning of graph validation...\n";
 
   cout << "Verifying edges..." << endl;
   for (size_t i = 0; i < dbg.num_edges(); i+= 1) {
