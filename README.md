@@ -67,14 +67,14 @@ This test loads the constructsd dynamicBOSS, then adds `k`-mers from a FASTA fil
 `test/runDelVerify.bash` runs the test.  Input are the `.dbg` and `.fasta` files. For example `test/yeast_1.solid_kmers_binary.packed.dbg` and `test/yeast_2.fasta`. 
 ```
 cd test
-bash runDelVerify.bash /yeast_1.solid_kmers_binary.packed.dbg yeast_2.fasta
+bash runDelVerify.bash yeast_1.solid_kmers_binary.packed.dbg yeast_2.fasta
 ```
 
 ### Test 2
 This test deletes random `k`-mers from a starting graph, then adds them back in and verifies that the initial and final graphs are the same.
 This test loads the constructsd dynamicBOSS,
-then deletes the user-defined number of random `k`-mers with `delete-edge`, add them back to the graph and confirms that the starting and final graphs are the same.
-`test/runDelAdd.bash` runs the test.  Inputs are .dbg file and an integer, for example `test/yeast_1.solid_kmers_binary.packed.dbg` and
+then deletes the user-defined number of random `k`-mers with `delete-edge`, adds them back to the graph and confirms that the starting and final graphs are the same.
+`test/runDelAdd.bash` runs the test.  Inputs are `.dbg` file and an integer, for example `test/yeast_1.solid_kmers_binary.packed.dbg` and
 `1000`.
 ```
 cd test
