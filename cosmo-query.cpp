@@ -1,157 +1,169 @@
 #include <iostream>
 #include <fstream>
-#include <algorithm>
-#include <chrono>
 #include <libgen.h> // basename
-#include <sys/mman.h> // mlockall
-
 #include "tclap/CmdLine.h"
-
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/wavelet_trees.hpp>
-#include <sdsl/wt_algorithm.hpp>
-
-
 #include "io.hpp"
-#include "debruijn_graph.hpp"
-
-#include "debruijn_hypergraph.hpp"
+#include "dynBoss.hpp"
 #include "algorithm.hpp"
-#include "wt_algorithm.hpp"
-
-#include <stdint.h>
+#include "utility.hpp"
 #include "formatutil.cpp"
-
 using namespace std;
 using namespace sdsl;
 
-string graph_extension = ".dbg";
-string contig_extension = ".fasta";
+/*This code once query the random kmers from available edges (member_kmers) of
+the DynamicBOSS and then query the random kmers counted from a .fasta file
+(random_kmers).
+usage: ./cosmo-index <.dbg file> <number of member_kmers> <.fasta file> */
 
+string extension = ".dbg";
 struct parameters_t {
   std::string input_filename = "";
-   std::string fasta_filename = "";
-  std::string output_prefix = "";
+  std::string kmer_filename = "";
+  std::string number_of_kmers = "";
 };
+
 
 void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
+
 {
-  TCLAP::CmdLine cmd("Cosmo Copyright (c) Alex Bowe (alexbowe.com) 2014", ' ', VERSION);
+
+  TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".dbg file (output from cosmo-build).", true, "", "input_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
+  TCLAP::UnlabeledValueArg<std::string> number_of_kmers_arg("num_kmers",
+            "number of memebr_kmers to query.", true, "", "number_of_kmers", cmd);
+  TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
+              ".fasta file to count random_kmers.", true, "", "input_file", cmd);
 
-  TCLAP::UnlabeledValueArg<std::string> fasta_filename_arg("fasta",
-							   ".fasta file (k-mers).",
-							   true, "",
-							   "fasta_file", cmd);
-  string output_short_form = "output_prefix";
-  TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
-            "Output prefix. Contigs will be written to [" + output_short_form + "]" + contig_extension + ". " +
-            "Default prefix: basename(input_file).", false, "", output_short_form, cmd);
   cmd.parse( argc, argv );
-
-  // -d flag for decompression to original kmer biz
   params.input_filename  = input_filename_arg.getValue();
-  params.fasta_filename = fasta_filename_arg.getValue();
-  params.output_prefix   = output_prefix_arg.getValue();
+  params.kmer_filename   = kmer_filename_arg.getValue();
+  params.number_of_kmers   = number_of_kmers_arg.getValue();
 }
+
+void getKmers( size_t& nKmers,
+                  size_t k,
+                  set< string >& kmers,
+                  parameters_t& p) {
+        ifstream in(p.kmer_filename );
+        string sline;
+        vector< string > vline;
+        while ( getline( in, sline ) ) {
+            vline.push_back( sline );
+        }
+
+        size_t pos = 0;
+        vector< string > reads;
+        string read;
+        do {
+            if (vline[pos][0] == '>') {
+                //finish current read and start a new one
+                if (!read.empty()) {
+                    reads.push_back(read);
+                    read.clear();
+                }
+            } else {
+                read += vline[pos];
+            }
+
+            ++pos;
+        } while (pos != vline.size());
+
+        if (!read.empty()) //handle the last read
+            reads.push_back( read );
+
+        for (size_t i = 0; i < reads.size(); ++i) {
+            string sline = reads[i];
+            size_t read_length = sline.size();
+
+            size_t nMers = read_length - k + 1;
+            for (size_t start = 0; start < nMers; ++start) {
+                string kmer = sline.substr( start, k );
+                kmers.insert( kmer );
+            }
+        }
+
+        in.close();
+        nKmers = kmers.size();
+    }
+
+
+
+
+
 
 int main(int argc, char* argv[]) {
-  parameters_t p;
-  parse_arguments(argc, argv, p);
-
-  // TO LOAD:
-  debruijn_graph<> g;
-  load_from_file(g, p.input_filename);
-
-  auto dbg_size = size_in_mega_bytes(g);
-  cerr << "k             : " << g.k << endl;
-  cerr << "num_nodes()   : " << g.num_nodes() << endl;
-  cerr << "num_edges()   : " << g.num_edges() << endl;
-  cerr << "W size        : " << size_in_mega_bytes(g.m_edges) << " MB" << endl;
-  cerr << "L size        : " << size_in_mega_bytes(g.m_node_flags) << " MB" << endl;
-  cerr << "DBG size      : " << dbg_size << " MB" << endl;
-  cerr << "Bits per edge : " << bits_per_element(g) << " Bits" << endl;
-
-  /*
-  cerr << "symbol ends:" << endl;
-  for (size_t i = 0; i<5; ++i) {
-    cerr << i << ": " << g.m_symbol_ends[i] << endl;
-  }
-  */
-
-  int num_queries = 2e4;
-  size_t min_k = 8; // this could be 0, but it affects longer too much
-  size_t max_k = g.k-2; // K is the edge length, and K-1 node lenght.
-  // Time will be identical if we measure K-1
-
-  // get k-mers and edgemers from file
-  cout << "Reading member k-mer list..." << endl;
-  
-  unordered_set<kmer_t> kmers;
-  unordered_set<kmer_t> edgemers;
-  auto start = std::chrono::system_clock::now();
-  handle_mers( p.fasta_filename, 27, kmers, edgemers );
+    parameters_t p;
+    parse_arguments(argc, argv, p);
+    cout<<"Loading DynamicBOSS from file:  "<<p.input_filename<<endl;
+    dyn_boss dbg;
+    ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
+    load_from_file(dbg, p.input_filename);
+    input.close();
 
 
-  unsigned k = g.k;
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<u_int64_t> sample_dis(0, pow(2, 2*k) - 1);
-  size_t nQuery = 5e5;
-  kmer_t kk;
-  double t_elapsed = 0.0;
-  clock_t t_start;
-  string merToQuery;
-  for (unsigned i = 0; i < nQuery; ++i) {
-     //generate a random k-mer
-     kk = sample_dis( gen ) ;
 
-     // cout << "Testing k-mer: " << get_kmer_str( kk, k ) << ' ' << endl;
-     merToQuery = get_kmer_str( kk, k );
-     t_start = clock();
-     //boopair<size_t,size_t> nn =
-     g.index( merToQuery.begin() );
+    cout << "k             : " << dbg.k << endl;
+    cout << "num_nodes()   : " << dbg.num_nodes() << endl;
+    cout << "num_edges()   : " << dbg.num_edges() << endl;
+    size_t bs = dbg.bit_size();
+    cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+    cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+    cout<<"==============================="<<endl;
 
-     t_elapsed += double(clock() - t_start);
-     //cout << nn.first << " " << nn.second << endl;
-   }
-   t_elapsed = t_elapsed/ CLOCKS_PER_SEC;
 
-   double avgQueryTime = t_elapsed / nQuery;
-   cout << "Average query time: " << avgQueryTime << " s" << endl;
 
-   if (!p.output_prefix.empty()) {
-      ofstream ofs( p.output_prefix.c_str(), ofstream::out | ofstream::app );
-      ofs << avgQueryTime << ' ';
-   }
-   
-   cout << "Beginning queries of members..." << endl;
-   
-   std::uniform_int_distribution<u_int64_t> unif_dist (0, kmers.size() - 1);
+    vector<string>all_kmers;
+    size_t nOps = stoi(p.number_of_kmers) ;
 
-   vector<kmer_t> vKmers( kmers.begin(), kmers.end() );
-   t_elapsed = 0.0;
-   bool bMem = false;
-   for (unsigned i = 0; i < nQuery; i++) {
-      int randnum = unif_dist( gen );
+    cout<<"Selecting "<<nOps<<" random member kmers to query ..."<<endl;
+    while (all_kmers.size() < nOps ){
+       size_t pos;
+       string kmer;
+        do {
+          pos = rand() % dbg.num_edges();
+          kmer = dbg.edge_label( pos );
 
-      // Test membership
-      merToQuery = get_kmer_str( vKmers[ randnum ], k );
-      clock_t t_start = clock();
-      bMem = g.index( merToQuery.begin() );
-      t_elapsed += double (clock() - t_start);
+       } while ( kmer.find('$') != string::npos );
 
-      assert( bMem );
-   }
+       all_kmers.push_back(kmer);
 
-   avgQueryTime = t_elapsed / nQuery / CLOCKS_PER_SEC;
-   cout << "Average query time: " << avgQueryTime << " s" << endl;
+    }
 
-   if (!p.output_prefix.empty()) {
-      ofstream ofs( p.output_prefix.c_str(), ofstream::out | ofstream::app );
-      ofs << avgQueryTime << endl;
-   }
+    cout << "Beginning of querying..." << endl;
+    clock_t t_start = clock();
+
+    for (size_t i = 0; i< all_kmers.size();i++){
+      dbg.index_edge_alan( all_kmers[i].begin());
+    }
+
+    double t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
+
+    cout << "DONE with querying "<<nOps<< " of member_kmers\n";
+    cout << "Time per Op: " << t_elapsed / nOps << endl;
+    cout<<"==============================="<<endl;
+
+
+    cout << "Reading FASTA file " <<p.kmer_filename<< endl;
+    size_t nKmers;
+    set<string>kmers;
+
+    getKmers( nKmers, dbg.k,kmers, p );
+    cout << nKmers << " kmers were counted " << endl;
+
+    cout<<"Beginning of querying..."<<endl;
+    t_start = clock();
+
+    for (auto it = kmers.begin(); it != kmers.end(); ++it) {
+        string kmer = *it;
+        dbg.index_edge_alan(kmer.begin());
+      }
+
+    t_elapsed = (clock() - t_start) / CLOCKS_PER_SEC;
+
+    cout << "DONE with querying "<<kmers.size()<<" of random_kmers\n";
+    cout << "Time per Op: " << t_elapsed /kmers.size() << endl;
 }
-
