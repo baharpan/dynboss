@@ -63,22 +63,20 @@ bash runAddVerify.bash yeast_1
 ## Validation of deletion
 These tests confirm that deletion is the inverse of addition.
 ### Test 1
-This test constructs BOSS using a static construction method from DSK input,
-then adds `k`-mers from a FASTA file into the graph with `add-edge` then deletes them with `delete-edge` and confirms that the starting and final graphs are the same.
-`test/runDelVerify.bash` runs the test.  Input are two FASTA files, for example `test/yeast_1.fasta` and
-`test/yeast_2.fasta`. The graph is initially constructed from the first FASTA file, then `k`-mers are added and deleted from the second.
+This test loads the constructsd dynamicBOSS, then adds `k`-mers from a FASTA file into the graph with `add-edge` then deletes them with `delete-edge` and confirms that the starting and final graphs are the same.
+`test/runDelVerify.bash` runs the test.  Input are the `.dbg` and `.fasta` files. For example `test/yeast_1.solid_kmers_binary.packed.dbg` and `test/yeast_2.fasta`. 
 ```
 cd test
-bash runDelVerify.bash yeast_1 yeast_2
+bash runDelVerify.bash /yeast_1.solid_kmers_binary.packed.dbg yeast_2.fasta
 ```
 
 ### Test 2
 This test deletes random `k`-mers from a starting graph, then adds them back in and verifies that the initial and final graphs are the same.
-This test constructs BOSS using a static construction method from DSK input,
-then deletes `10000` random `k`-mers with `delete-edge`
-and confirms that the starting and final graphs are the same.
-`test/runDelAdd.bash` runs the test.  Input is a single FASTA file, for example `test/yeast_1.fasta`.
+This test loads the constructsd dynamicBOSS,
+then deletes the user-defined number of random `k`-mers with `delete-edge`, add them back to the graph and confirms that the starting and final graphs are the same.
+`test/runDelAdd.bash` runs the test.  Inputs are .dbg file and an integer, for example `test/yeast_1.solid_kmers_binary.packed.dbg` and
+`1000`.
 ```
 cd test
-bash runDelAdd.bash yeast_1
+bash runDelAdd.bash yeast_1.solid_kmers_binary.packed.dbg 1000
 ```
