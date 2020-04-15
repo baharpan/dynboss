@@ -35,10 +35,10 @@ make dsk k=64 canon=0
 ```
 DSK supports larger `k` than `64`, but currently this is the largest value supported by our implementation.
 ## Building the data structure
-Start with input FASTA file, for example `test/yeast_1.fasta`, which is included. No `N` characters are allowed in the FASTA file.  Run DSK (example with `k=40`):
+Start with input FASTA file, for example `test/yeast_1.fasta`, which is included. No `N` characters are allowed in the FASTA file.  Run DSK (example with `k=31`):
 ```
 cd test
-../dsk-/1.6906/dsk yeast_1.fasta 40
+../dsk-/1.6906/dsk yeast_1.fasta 31
 ```
 This produces output file `yeast_1.solid_kmers_binary`. Next, run `cosmo-pack`:
 ```
