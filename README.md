@@ -1,5 +1,5 @@
 This repository will be updated soon.
-# Dynamic BOSS
+# DynamicBOSS
 Dynamic succinct de Bruijn graph
 
 ## Dependencies
@@ -17,7 +17,7 @@ sudo apt-get install libtclap-dev
 ```
 
 ## How to compile
-### Dynamic BOSS
+### DynamicBOSS
 Update the paths on Makefile (unnecessary if dependencies installed on a Debian-based system as described above).
 ```
 make revcomps=0
@@ -51,14 +51,14 @@ Finally, run `cosmo-build-dyn` to build dynamic BOSS:
 ```
 to produce output file `yeast_1.solid_kmers_binary.packed.dbg`. 
 ## Validation of addition
-This test confirms that `add-edge` produces the same graph as the static construction method.
-This test constructs BOSS using a static construction method, as well as online from an empty graph
-using the dynamic `add_edge` function. The two graphs are then checked to ensure they contain the
+This test confirms that adding kmers to an empty graph builds
+the same graph as cosmo-build-dyn. The two graphs are then checked to ensure they contain the
 same edges and nodes. The script
-`test/runAddVerify.bash` runs the test.  Input is a single FASTA file, for example `test/yeast_1.fasta`.
+`test/runAddVerify.bash` runs the test.  Inputs are the `.dbg` file and `.fasta` file that
+DynamicBOSS is built on, for example `test/yeast_1.solid_kmers_binary.packed.dbg` and `test/yeast_1.fasta`
 ```
 cd test
-bash runAddVerify.bash yeast_1
+bash runAddVerify.bash yeast_1.solid_kmers_binary.packed.dbg yeast_1.fasta
 ```
 ## Validation of deletion
 These tests confirm that deletion is the inverse of addition.
