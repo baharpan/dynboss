@@ -15,7 +15,7 @@ Once it builds the DynamicBOSS using .packed file, then it loads the DynamicBOSS
 .dbg file and compares them.
 usage: ./load-verify <.packed file> <.dbg file>*/
 
-string extension = ".dbg";
+string extension = ".sdbg";
 
 struct parameters_t {
   std::string input_filename = "";
@@ -30,7 +30,7 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
             ".packed edge file (output from cosmo-pack).", true, "", "input_file", cmd);
   TCLAP::UnlabeledValueArg<std::string> graph_filename_arg("graph",
-            ".dbg file (the graph to load)", true, "", "graph_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "graph_file", cmd);
   string output_short_form = "output_prefix";
   TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
             "Output prefix. Graph will be written to [" + output_short_form + "]" + extension + ". " +
@@ -58,17 +58,17 @@ int main(int argc, char* argv[]) {
   cerr << "num_nodes()   : " << dbg.num_nodes() << endl;
   cerr << "num_edges()   : " << dbg.num_edges() << endl;
   size_t bs = dbg.bit_size();
-  cerr << "Total size   : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
+  cerr << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
   cerr << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
 
   char * base_name = basename(const_cast<char*>(p.input_filename.c_str()));
   string outfilename = ((p.output_prefix == "")? base_name : p.output_prefix) + extension;
-  //store_to_file(dbg, outfilename);
-  ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
-  size_t sizeOFgraph =  dbg.serialize( ofs );
-  //cout<<"Size in Disk  : "<<sizeOFgraph/ 1000000 << " MB" <<endl;
   cerr<<"Writing DynamicBOSS in file:  "<<outfilename.c_str()<<endl;
+  ofstream ofs( outfilename.c_str(), ios::out | ios::binary );
+  dbg.serialize( ofs );
   ofs.close();
+
+
 
 
   dyn_boss dbg2;
