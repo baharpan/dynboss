@@ -10,6 +10,6 @@ fi
 graph="$1"
 fastaFile="$2"
 
-cmd="$CosmoAddVerify $graph $fileFasta"
+cmd="$CosmoAddVerify $graph $fastaFile"
 echo $cmd
 $cmd
