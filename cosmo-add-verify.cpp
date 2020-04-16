@@ -12,10 +12,10 @@
 using namespace std;
 using namespace sdsl;
 
-/*This code adds k-mers from a FASTA file into the DynamicBOSS with add-edge
-then deletes them with delete-edge and confirms that the starting and
-final graphs are the same.
-usage: ./cosmo-delete-verify <.dbg file> <.fasta file>*/
+/*This code checks if adding kmers to an empty graph builds
+the same graph as cosmo-build-dyn.  
+usage: ./cosmo-add-verify <.dbg file> <.fasta file fasta file that
+DynamicBOSS is built on>*/
 
 string extension = ".dbg";
 
