@@ -13,8 +13,8 @@ using namespace std;
 using namespace sdsl;
 
 /*This code checks if adding kmers to an empty graph builds
-the same graph as cosmo-build-dyn.  
-usage: ./cosmo-add-verify <.dbg file> <.fasta file fasta file that
+the same graph as cosmo-build-dyn.
+usage: ./cosmo-add-verify <.dbg file> <.fasta file that
 DynamicBOSS is built on>*/
 
 string extension = ".dbg";
