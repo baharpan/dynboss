@@ -9,6 +9,7 @@ Dynamic succinct de Bruijn graph
 - [boost](https://github.com/boostorg/boost)
 - [tclap](http://tclap.sourceforge.net/)
 - [DSK](https://github.com/GATB/dsk), version 1.6906. The source code for this version is provided in this repository, in `dsk-1.6906`.
+- [DYNAMIC](https://github.com/xxsds/DYNAMIC) and [hopscotch-map](https://github.com/Tessil/hopscotch-map), which are added as submodules   in this repository. 
 
 Boost and tclap may be installed on a Debian-based system with the following commands.
 ```
@@ -16,8 +17,10 @@ sudo apt-get install libboost-dev
 sudo apt-get install libtclap-dev	
 ```
 
-## How to compile
-### DynamicBOSS
+## How to start
+```
+git clone --recurse-submodules https://github.com/baharpan/dynboss.git
+```
 Update the paths on Makefile (unnecessary if dependencies installed on a Debian-based system as described above).
 ```
 make revcomps=0
