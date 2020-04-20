@@ -21,6 +21,7 @@ sudo apt-get install libtclap-dev
 ```
 git clone --recurse-submodules https://github.com/baharpan/dynboss.git
 ```
+### DynamicBOSS
 Update the paths on Makefile (unnecessary if dependencies installed on a Debian-based system as described above).
 ```
 make revcomps=0
