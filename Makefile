@@ -53,7 +53,7 @@ BUILD_REQS=debruijn_graph.hpp io.hpp io.o debug.h
 DYN_BUILD_REQS=dynBoss.hpp io.hpp io.o debug.h kmer-counter.hpp
 ASSEM_REQS=debruijn_graph.hpp algorithm.hpp utility.hpp kmer.hpp uint128_t.hpp
 PACK_REQS=lut.hpp debug.h io.hpp io.o sort.hpp kmer.hpp dummies.hpp
-BINARIES=cosmo-pack cosmo-build-dyn cosmo-add-verify cosmo-delete-verify cosmo-delete-add
+BINARIES=cosmo-pack load-verify cosmo-build-dyn cosmo-functions cosmo-delete-verify cosmo-delete-add cosmo-query cosmo-add-verify
 
 default: all
 
@@ -73,20 +73,22 @@ cosmo-build: cosmo-build.cpp $(BUILD_REQS)
 cosmo-build-dyn: cosmo-build-dyn.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) $(DYN_FLAGS) -o cosmo-build-dyn $< io.o $(DEP_FLAGS)
 
+load-verify: load-verify.cpp $(DYN_BUILD_REQS)
+	$(CXX) $(CPP_FLAGS)  -o $@ $< io.o $(DEP_FLAGS) 
+
 cosmo-verify: cosmo-verify.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) -o cosmo-verify $< io.o $(DEP_FLAGS)
 
-#cosmo-assemble: cosmo-assemble.cpp $(ASSEM_REQS) wt_algorithm.hpp debruijn_hypergraph.hpp
-#		$(CXX) $(CPP_FLAGS) -o $@ $< $(DEP_FLAGS) 
+cosmo-functions: cosmo-functions.cpp $(DYN_BUILD_REQS)
+	$(CXX) $(CPP_FLAGS) -o $@ $< io.o $(DEP_FLAGS)
 
 cosmo-benchmark: cosmo-benchmark.cpp $(ASSEM_REQS) wt_algorithm.hpp debruijn_hypergraph.hpp
 		$(CXX) $(CPP_FLAGS) -o $@ $< $(DEP_FLAGS)
 
 cosmo-benchmark-dyn: cosmo-benchmark.cpp $(ASSEM_REQS) wt_algorithm.hpp debruijn_hypergraph.hpp
 		$(CXX) $(CPP_FLAGS) $(DYN_FLAGS) -o cosmo-benchmark-dyn $< $(DEP_FLAGS)
-cosmo-query: cosmo-query.cpp $(ASSEM_REQS) wt_algorithm.hpp debruijn_hypergraph.hpp
-		$(CXX) $(CPP_FLAGS) -o $@ $< $(DEP_FLAGS) 
-
+cosmo-query: cosmo-query.cpp $(DYN_BUILD_REQS)
+	$(CXX) $(CPP_FLAGS) -o $@ $< io.o $(DEP_FLAGS)
 cosmo-add-delete: cosmo-add-delete.cpp $(DYN_BUILD_REQS)
 	$(CXX) $(CPP_FLAGS) -o cosmo-add-delete $< io.o $(DEP_FLAGS)
 
