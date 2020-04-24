@@ -9,6 +9,7 @@
 #include "algorithm.hpp"
 #include "utility.hpp"
 #include "formatutil.cpp"
+#include "kmer-counter.hpp"
 using namespace std;
 using namespace sdsl;
 
@@ -17,7 +18,6 @@ the same graph as cosmo-build-dyn.
 usage: ./cosmo-add-verify <.dbg file> <.fasta file that
 DynamicBOSS is built on>*/
 
-string extension = ".dbg";
 
 struct parameters_t {
    std::string input_filename = "";
@@ -30,9 +30,9 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 {
    TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
    TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "dbg file", cmd);
    TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
-            ".fasta file to count kmers to add and delete.", true, "", "input_file", cmd);
+            ".fasta file to count kmers to add and delete.", true, "", "fasta file", cmd);
 
    cmd.parse( argc, argv );
 
@@ -40,55 +40,6 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
    params.kmer_filename  = kmer_filename_arg.getValue();
 }
 
-void getKmers( size_t& nKmers,
-	       size_t k,
-	       set< string >& kmers,
-	       parameters_t& p) {
-   ifstream in(p.kmer_filename );
-   string sline;
-   vector< string > vline;
-   while ( getline( in, sline ) ) {
-      vline.push_back( sline );
-   }
-
-   size_t pos = 0;
-   vector< string > reads;
-   string read;
-   do {
-      if (vline[pos][0] == '>') {
-	 //finish current read and start a new one
-	 if (!read.empty()) {
-	    reads.push_back(read);
-	    read.clear();
-	 }
-      } else {
-	 read += vline[pos];
-      }
-
-      ++pos;
-   } while (pos != vline.size());
-
-   if (!read.empty()) //handle the last read
-      reads.push_back( read );
-
-   for (size_t i = 0; i < reads.size(); ++i) {
-      string sline = reads[i];
-      size_t read_length = sline.size();
-      for (size_t i = 0; i < read_length; ++i) {
-	 if (sline[i] == 'N')
-	    sline[i] = 'A';
-      }
-
-      size_t nMers = read_length - k + 1;
-      for (size_t start = 0; start < nMers; ++start) {
-	       string kmer = sline.substr( start, k );
-	           kmers.insert( kmer );
-      }
-   }
-
-   in.close();
-   nKmers = kmers.size();
-}
 
 int main(int argc, char* argv[]) {
   parameters_t p;
@@ -116,7 +67,7 @@ int main(int argc, char* argv[]) {
   cout << "Reading FASTA file " <<p.kmer_filename<< endl;
   size_t nKmers;
   set<string> kmer_2;
-  getKmers( nKmers, dbg.k, kmer_2, p );
+  getKmers( nKmers, dbg.k, kmer_2, p.kmer_filename );
   cout << nKmers << " distinct kmers were counted " << endl;
 
 

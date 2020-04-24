@@ -17,7 +17,6 @@ them back to the graph with add_edge and confirms that the starting and
 final graphs are the same.
 usage: ./cosmo-delete-add <.dbg file> <number of random edges to delete and add>*/
 
-string extension = ".dbg";
 
 struct parameters_t {
   std::string input_filename = "";
@@ -28,7 +27,7 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 {
   TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "dbg file", cmd);
   TCLAP::UnlabeledValueArg<std::string> number_of_kmers_arg("num_kmers",
             "number of kmers to process dynamically.", true, "", "number_of_kmers", cmd);
   cmd.parse( argc, argv );

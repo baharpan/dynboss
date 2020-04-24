@@ -9,6 +9,7 @@
 #include "algorithm.hpp"
 #include "utility.hpp"
 #include "formatutil.cpp"
+#include "kmer-counter.hpp"
 using namespace std;
 using namespace sdsl;
 
@@ -17,7 +18,7 @@ the DynamicBOSS and then query the random kmers counted from a .fasta file
 (random_kmers).
 usage: ./cosmo-index <.dbg file> <number of member_kmers> <.fasta file> */
 
-string extension = ".dbg";
+
 struct parameters_t {
   std::string input_filename = "";
   std::string kmer_filename = "";
@@ -32,67 +33,17 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
 
   TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".dbg file (output from cosmo-build-dyn).", true, "", "input_file", cmd);
+            ".dbg file (output from cosmo-build-dyn).", true, "", "dbg file", cmd);
   TCLAP::UnlabeledValueArg<std::string> number_of_kmers_arg("num_kmers",
             "number of memebr_kmers to query.", true, "", "number_of_kmers", cmd);
   TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
-              ".fasta file to count random_kmers.", true, "", "input_file", cmd);
+              ".fasta file to count random_kmers.", true, "", "fasta file", cmd);
 
   cmd.parse( argc, argv );
   params.input_filename  = input_filename_arg.getValue();
   params.kmer_filename   = kmer_filename_arg.getValue();
   params.number_of_kmers   = number_of_kmers_arg.getValue();
 }
-
-void getKmers( size_t& nKmers,
-                  size_t k,
-                  set< string >& kmers,
-                  parameters_t& p) {
-        ifstream in(p.kmer_filename );
-        string sline;
-        vector< string > vline;
-        while ( getline( in, sline ) ) {
-            vline.push_back( sline );
-        }
-
-        size_t pos = 0;
-        vector< string > reads;
-        string read;
-        do {
-            if (vline[pos][0] == '>') {
-                //finish current read and start a new one
-                if (!read.empty()) {
-                    reads.push_back(read);
-                    read.clear();
-                }
-            } else {
-                read += vline[pos];
-            }
-
-            ++pos;
-        } while (pos != vline.size());
-
-        if (!read.empty()) //handle the last read
-            reads.push_back( read );
-
-        for (size_t i = 0; i < reads.size(); ++i) {
-            string sline = reads[i];
-            size_t read_length = sline.size();
-
-            size_t nMers = read_length - k + 1;
-            for (size_t start = 0; start < nMers; ++start) {
-                string kmer = sline.substr( start, k );
-                kmers.insert( kmer );
-            }
-        }
-
-        in.close();
-        nKmers = kmers.size();
-    }
-
-
-
-
 
 
 int main(int argc, char* argv[]) {
@@ -151,7 +102,7 @@ int main(int argc, char* argv[]) {
     size_t nKmers;
     set<string>kmers;
 
-    getKmers( nKmers, dbg.k,kmers, p );
+    getKmers( nKmers, dbg.k, kmers, p.kmer_filename );
     cout << nKmers << " kmers were counted " << endl;
 
     cout<<"Beginning of querying..."<<endl;
