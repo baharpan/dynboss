@@ -1,5 +1,4 @@
 # NOTE: needs boost, tclap, and sdsl
-#LD_LIBRARY_PATH="/ufrc/boucher/baharpan/VARI/3rd_party_inst/boost/lib/"
 CXX=g++ # clang++-3.8 # g+
 CPP_FLAGS=-m64 -std=c++1z -Wall
 DEP_PATH=3rd_party_inst

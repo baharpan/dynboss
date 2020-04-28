@@ -26,6 +26,10 @@ void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
    TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
+
+   TCLAP::UnlabeledValueArg<std::string> function_arg("functions",
+            ".enter add, delete or query.", true, "", "functions", cmd);
+
    TCLAP::ValueArg<std::string> kmer_filename_arg("s","kmers",
             ".fasta file to count kmers to add and delete.", false, "", "kmer file", cmd);
 
@@ -35,8 +39,6 @@ void parse_arguments(int argc, char **argv, parameters_t & params)
    TCLAP::ValueArg<std::string> pack_filename_arg("p","pack-input",
             ".packed file (output from cosmo-pack).", false, "", "pack file", cmd);
 
-   TCLAP::ValueArg<std::string> function_arg("f","functions",
-            ".enter add, delete or query.", true, "", "functions", cmd);
 
 
    cmd.parse( argc, argv );
