@@ -49,9 +49,11 @@ bin/dynamicBOSS   query   -g <graph file> -s <kmer file>
 
 `query` counts the distinct kmers in the`<kmer file>`, query them in the `<graph file>` and writes the results in file queryResults.tsv.
 
+`<.packed file>` is the output of `cosmo-pack`.
+
 `<graph file>` must have extensions `.dbg` or `.updated`.
 
-`<kmer file>` must be fasta file with extensions `.fasta` or `.fa`
+`<kmer file>` must be a fasta file with extensions `.fasta` or `.fa`
 
 ## Compelete Example
 ```
