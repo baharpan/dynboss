@@ -1,86 +1,80 @@
-This repository will be updated soon.
 # DynamicBOSS
-Dynamic succinct de Bruijn graph
+Succinct Dynamic de Bruijn Graph
 
 ## Dependencies
 - SDSL -- [Succinct Data Structure Library](https://github.com/simongog/sdsl-lite)
-
-  To avoid the necessity of editing the Makefile, SDSL may be installed to `/usr/local/`.
 - [boost](https://github.com/boostorg/boost)
 - [tclap](http://tclap.sourceforge.net/)
 - [DSK](https://github.com/GATB/dsk), version 1.6906. The source code for this version is provided in this repository, in `dsk-1.6906`.
-- [DYNAMIC](https://github.com/xxsds/DYNAMIC) and [hopscotch-map](https://github.com/Tessil/hopscotch-map), which are added as submodules   in this repository. 
+- [DYNAMIC](https://github.com/xxsds/DYNAMIC) and [hopscotch-map](https://github.com/Tessil/hopscotch-map), both added as submodules   in this repository. 
 
-Boost and tclap may be installed on a Debian-based system with the following commands.
+## Installation
 ```
-sudo apt-get install libboost-dev
-sudo apt-get install libtclap-dev	
-```
+git clone --recurse-submodules https://github.com/baharpan/dynboss.git 
+cd dynboss
 
-## How to start
-```
-git clone --recurse-submodules https://github.com/baharpan/dynboss.git
-```
-### DynamicBOSS
-Update the paths on Makefile (unnecessary if dependencies installed on a Debian-based system as described above).
-```
-make revcomps=0
-```
-### DSK
-```
+#compile DSK
 cd dsk-1.6906
-
 #for Max kmer size 32:
 make dsk canon=0
-
 #for larger kmer size like 64:
 make dsk k=64 canon=0
 
+#compile DynamicBOSS
+cd src
+#Update the paths on Makefile (sdsl and tclap installed in the folder 3rd_party_inst, and boost in 3rd_party_inst/boost)
+make revcomps=0
 ```
-DSK supports larger `k` than `64`, but currently this is the largest value supported by our implementation.
-## Building the data structure
-Start with input FASTA file, for example `test/yeast_1.fasta`, which is included. No `N` characters are allowed in the FASTA file.  Run DSK (example with `k=31`):
+## Input
+Input is fasta file. No `N` characters are allowed in the fasta file.  
+## kmer counting and packing the edges
 ```
-cd test
-../dsk-/1.6906/dsk yeast_1.fasta 31
+dsk-1.6906/dsk <.fasta file> <k value>
+bin/cosmo-pack <.solid_kmers_binary file>
 ```
-This produces output file `yeast_1.solid_kmers_binary`. Next, run `cosmo-pack`:
+## DynamicBOSS Interface
 ```
-../cosmo-pack yeast_1.solid_kmers_binary
+bin/dynamicBOSS   build   -p <.packed file>
+bin/dynamicBOSS   add     -g <graph file> -s <kmer file>
+bin/dynamicBOSS   delete  -g <graph file> -s <kmer file>
+bin/dynamicBOSS   query   -g <graph file> -s <kmer file>
 ```
-which produces output `yeast_1.solid_kmers_binary.packed`
-Finally, run `cosmo-build-dyn` to build dynamic BOSS:
-```
-../cosmo-build-dyn yeast_1.solid_kmers_binary.packed
-```
-to produce output file `yeast_1.solid_kmers_binary.packed.dbg`. 
-## Validation of addition
-This test confirms that adding kmers to an empty graph builds
-the same graph as cosmo-build-dyn. The two graphs are then checked to ensure they contain the
-same edges and nodes. The script
-`test/runAddVerify.bash` runs the test.  Inputs are the `.dbg` file and `.fasta` file that
-DynamicBOSS is built on, for example `test/yeast_1.solid_kmers_binary.packed.dbg` and `test/yeast_1.fasta`
-```
-cd test
-bash runAddVerify.bash yeast_1.solid_kmers_binary.packed.dbg yeast_1.fasta
-```
-## Validation of deletion
-These tests confirm that deletion is the inverse of addition.
-### Test 1
-This test loads the constructsd dynamicBOSS, then adds `k`-mers from a FASTA file into the graph with `add-edge` then deletes them with `delete-edge` and confirms that the starting and final graphs are the same.
-`test/runDelVerify.bash` runs the test.  Input are the `.dbg` and `.fasta` files. For example `test/yeast_1.solid_kmers_binary.packed.dbg` and `test/yeast_2.fasta`. 
+`build` builds the graph (`.dbg` file)
+`add` counts the distinct kmers in the`<kmer file>`, adds them to the `<graph file>` and writes the updated graph with extesion `.updated`.
+`delete` counts the distinct kmers in the`<kmer file>`, deletes them from the `<graph file>` and writes the updated graph with extesion `.updated`.
+`query` counts the distinct kmers in the`<kmer file>`, query them in the `<graph file>` and writes the results in file queryResults.tsv.
+`<graph file>` must have extensions `.dbg` or `.updated`.
+`<kmer file>` must be fasta file with extensions `.fasta` or `.fa`
+## Compelete Example
 ```
 cd test
-bash runDelVerify.bash yeast_1.solid_kmers_binary.packed.dbg yeast_2.fasta
+#count kmers with k=31, and output ".solid_kmers_binary" file
+../dsk-/1.6906/dsk  yeast_1.fasta 31
+
+#create file "yeast_1.solid_kmers_binary.packed" needed for building DynamicBOSS
+../bin/cosmo-pack   yeast_1.solid_kmers_binary
+
+#build the DynamicBOSS called "yeast_1.solid_kmers_binary.packed.dbg"
+../bin/dynamicBOSS  build  -p   yeast_1.solid_kmers_binary.packed
+
+#add the distinct kmers in fasta file "yeast_2.fasta" to graph "yeast_1.solid_kmers_binary.packed.dbg" and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
+../bin/dynamicBOSS  add    -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
+
+#delete the distinct kmers in fasta file "yeast_2.fasta" from graph "yeast_1.solid_kmers_binary.packed.dbg" and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
+../bin/dynamicBOSS  delete -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
+
+#query the distinct kmers in fasta file "yeast_2.fasta" in graph "yeast_1.solid_kmers_binary.packed.dbg" and write the results in queryResults.tsv
+../bin/dynamicBOSS  query  -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 ```
 
-### Test 2
-This test deletes random `k`-mers from a starting graph, then adds them back in and verifies that the initial and final graphs are the same.
-This test loads the constructsd dynamicBOSS,
-then deletes the user-defined number of random `k`-mers with `delete-edge`, adds them back to the graph and confirms that the starting and final graphs are the same.
-`test/runDelAdd.bash` runs the test.  Inputs are `.dbg` file and an integer, for example `test/yeast_1.solid_kmers_binary.packed.dbg` and
-`1000`.
+## Validations
+To validate the addition and deletion in DynamicBOSS, try below `.bash` files in folder `test`
+
 ```
-cd test
-bash runDelAdd.bash yeast_1.solid_kmers_binary.packed.dbg 1000
+bash runAddVerify.bash <.dbg file> <.fasta file that DynamicBOSS is built on>
+bash runDelAdd.bash <.dbg file> <number of kmers to delete and add>
+bash runDelVerify.bash <.dbg file> <.fasta file>
 ```
+`runAddVerify.bash` confirms that adding kmers to an empty graph builds the same graph as `dynamicBOSS build`.
+`runDelAdd.bash` and `runDelVerify.bash` confirm that deletion is the inverse of addition.
+
