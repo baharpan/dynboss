@@ -1,4 +1,4 @@
-cosmodel="../cosmo-delete-verify"
+cosmodel="../bin/cosmo-delete-verify"
 k=31
 
 if [ $# -lt 2 ]; then

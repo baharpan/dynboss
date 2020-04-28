@@ -1,5 +1,5 @@
 
-cosmodel="../cosmo-delete-add"
+cosmodel="../bin/cosmo-delete-add"
 k=31
 
 if [ $# -lt 2 ]; then

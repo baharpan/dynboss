@@ -13,14 +13,12 @@
 using namespace std;
 using namespace sdsl;
 
-// usage: ./cosmo-functions <function> <.dbg file> <.fasta file>
-
-string extension = "updated";
+string extension;
 struct parameters_t {
    std::string function = "";
-   std::string input_filename = "";
+   std::string pack_filename = "";
+   std::string graph_filename = "";
    std::string kmer_filename = "";
-   std::string output_prefix = "";
    std::string queryfile= "queryResults.tsv";
 };
 
@@ -28,64 +26,131 @@ void parse_arguments(int argc, char **argv, parameters_t & params);
 void parse_arguments(int argc, char **argv, parameters_t & params)
 {
    TCLAP::CmdLine cmd("DynamicBOSS. Copyright (c) Bahar Alipanahi, Alan Kuhnle, Alex Bowe 2019", ' ', VERSION);
-   TCLAP::UnlabeledValueArg<std::string> function_arg("functions",
+   TCLAP::ValueArg<std::string> kmer_filename_arg("s","kmers",
+            ".fasta file to count kmers to add and delete.", false, "", "kmer file", cmd);
+
+   TCLAP::ValueArg<std::string> graph_filename_arg("g", "input",
+            ".dbg file (output from dynamicBOSS -f build).", false, "", "dbg file", cmd);
+
+   TCLAP::ValueArg<std::string> pack_filename_arg("p","pack-input",
+            ".packed file (output from cosmo-pack).", false, "", "pack file", cmd);
+
+   TCLAP::ValueArg<std::string> function_arg("f","functions",
             ".enter add, delete or query.", true, "", "functions", cmd);
-   TCLAP::UnlabeledValueArg<std::string> input_filename_arg("input",
-            ".dbg file (output from cosmo-build-dyn).", true, "", "dbg file", cmd);
-   TCLAP::UnlabeledValueArg<std::string> kmer_filename_arg("kmers",
-            ".fasta file to count kmers to add and delete.", true, "", "fasta file", cmd);
-   string output_short_form = "output_prefix";
-   TCLAP::ValueArg<std::string> output_prefix_arg("o", "output_prefix",
-            "Output prefix. The updated graph will be written to [" + output_short_form + "]" + extension + ". " +
-            "Default prefix: basename(input_file).", false, "", output_short_form, cmd);
+
 
    cmd.parse( argc, argv );
    params.function  = function_arg.getValue();
-   params.input_filename  = input_filename_arg.getValue();
+   params.pack_filename  = pack_filename_arg.getValue();
+   params.graph_filename  = graph_filename_arg.getValue();
    params.kmer_filename  = kmer_filename_arg.getValue();
 }
 
 
 int main(int argc, char* argv[]){
+
   parameters_t p;
+  string ext;
+
   parse_arguments(argc, argv, p);
-  if (p.function != "add" && p.function != "delete" && p.function != "query"){
-    cout<<"Please insert one of the functions add, delete, or query\n";
+
+
+  if (p.function != "build" && p.function != "add" && p.function != "delete" && p.function != "query"){
+    cout<<"ERROR: Please insert one of the functions build, add, delete, or query\n";
     exit(0);
   }
-  cout<<"Function "<<p.function<<" is called."<<endl;
+  cout<<"Function "<<p.function<<" is called"<<endl;
 
-  cerr<<"Loading DynamicBOSS from file: "<<p.input_filename<<endl;
+  if (p.function == "add" || p.function == "delete" || p.function == "query"){
+
+      if (p.graph_filename == ""){
+        cout<<"ERROR: No graph file entered to update or query (empty -g option)"<<endl;
+        exit(0);
+      }
+
+      ext = p.graph_filename.substr(p.graph_filename.find_last_of(".") + 1);
+      if (ext != "dbg" && ext != "updated"){
+        cout<<"ERROR: Graph file name must have extension .dbg or .updated only"<<endl;
+        exit(0);
+      }
+
+      if(p.kmer_filename ==""){
+        cout<<"ERROR: No kmer file entered--kmers to update/query will be counted from this file (empty -s option)"<<endl;
+        exit(0);
+      }
+
+      ext = p.kmer_filename.substr(p.kmer_filename.find_last_of(".") + 1);
+      if (ext != "fasta" && ext != "fa"){
+        cout<<"ERROR: Kmer file format must be fasta (extension .fa or .fasta only)"<<endl;
+        exit(0);
+      }
+    }
+
+  else{
+
+    if(p.pack_filename == ""){
+      cout<<"ERROR: No .packed file entered for build (empty -p option)"<<endl;
+      exit(0);
+    }
+
+    ext = p.pack_filename.substr(p.pack_filename.find_last_of(".") + 1);
+    if (ext != "packed"){
+      cout<<"ERROR: .packed file must have extension .packed"<<endl;
+      exit(0);
+     }
+
+  }
+  cout << "====================================================================\n";
+
   dyn_boss dbg;
-  ifstream input(p.input_filename, ios::in|ios::binary|ios::ate);
-  load_from_file(dbg, p.input_filename);
-  //cout << "Constructing dynamic BOSS from DSK input..." << endl;
-  //dbg.load_from_packed_edges( input, "$ACGT" );
+  size_t bs;
+  bool warning = 0;
+  double time_elapsed = 0;
+  clock_t t_start;
+
+  if (p.function == "build"){
+    cout<<"BUILDING GRAPH\n";
+
+    ifstream input(p.pack_filename, ios::in|ios::binary|ios::ate);
+
+    t_start = clock();
+    dbg.load_from_packed_edges( input, "$ACGT" );
+    time_elapsed += double (clock() - t_start);
+
+    input.close();
+    cout<<"DynamicBOSS graph is built in: "<<time_elapsed/CLOCKS_PER_SEC<<" (s)"<<endl;
+  }
+
+
+  else{
+  cout<<"LOADING GRAPH\n";
+  cout<<"Loading DynamicBOSS from file: "<<p.graph_filename<<endl;
+  ifstream input(p.graph_filename, ios::in|ios::binary|ios::ate);
+  load_from_file(dbg, p.graph_filename);
   input.close();
   cout << "Original graph: " << endl;
   cout << "k             : " << dbg.k << endl;
   cout << "num_nodes()   : " << dbg.num_nodes() << endl;
   cout << "num_edges()   : " << dbg.num_edges() << endl;
-  size_t bs = dbg.bit_size();
+  bs = dbg.bit_size();
   cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
   cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
-  //cout << "matrix:\n";
-  //  dbg.print_boss_matrix( cerr );
-  cout << "===============================\n";
+  cout << "====================================================================\n";
+
+  cout<<"OPENING KMER FILE\n";
   cout << "Reading FASTA file " <<p.kmer_filename<< endl;
   size_t nKmers;
   set<string> kmers;
   getKmers( nKmers, dbg.k, kmers, p.kmer_filename );
   cout << nKmers << " distinct kmers were counted " << endl;
-  cout << "===============================\n";
+  cout << "====================================================================\n";
 
-  double time_elapsed = 0;
+
   size_t counter = 0;
   size_t available_kmers = 0;
   size_t absent_kmers = 0;
-  bool warning = 0;
 
-
+  cout<<"PROCESS STARTS\n";
   if (p.function == "add"){
     for (auto it = kmers.begin(); it != kmers.end(); ++it) {
         if (counter % 1000 == 0) {
@@ -95,7 +160,7 @@ int main(int argc, char* argv[]){
         string kmer = *it;
         if (!dbg.index_edge_alan( kmer.begin() )) {
 
-          clock_t t_start = clock();
+          t_start = clock();
           dbg.add_edge( kmer );
           time_elapsed += double (clock() - t_start);
 
@@ -109,7 +174,7 @@ int main(int argc, char* argv[]){
       cout<<available_kmers<<" ("<<available_kmers*100/kmers.size()<<"%) of the kmers were already in the graph\n";
       if (available_kmers == kmers.size()){
         warning = 1;
-        cout<<"Warning! all kmers were already in the graph!\n";
+        cout<<"WARNING! all kmers were already in the graph!\n";
       }
     }
     cout<<kmers.size()- available_kmers<< " kmers added to the graph in "<< time_elapsed/CLOCKS_PER_SEC<<" (s)"<<endl;
@@ -140,7 +205,7 @@ int main(int argc, char* argv[]){
       cout<<absent_kmers<<" ("<<absent_kmers*100/kmers.size()<<"%) of the kmers were not in the graph\n";
       if (absent_kmers == kmers.size()){
         warning = 1;
-        cout<<"Warning! none of the kmers were in the graph!\n";
+        cout<<"WARNING! none of the kmers were in the graph!\n";
       }
     }
     cout<<kmers.size()- absent_kmers<< " kmers deleted from the graph in "<< time_elapsed/CLOCKS_PER_SEC<<" (s)"<<endl;
@@ -173,22 +238,33 @@ if (p.function == "query"){
   ofs.close();
 
 }
-cout << "===============================\n";
-if ((p.function == "add" || p.function == "delete") && !warning){
-  cout << "Updated graph: " << endl;
+}
+cout << "====================================================================\n";
+if (p.function != "build")
+  cout<<"PROCESS FINISHED\n";
+if (p.function == "build" || (p.function != "query" && !warning)){
+  (p.function == "build") ? cout << "Graph:\n" : cout<<"Updated graph:\n";
   cout << "k             : " << dbg.k << endl;
   cout << "num_nodes()   : " << dbg.num_nodes() << endl;
   cout << "num_edges()   : " << dbg.num_edges() << endl;
   bs = dbg.bit_size();
   cout << "Total size    : " << bs / 8.0 / 1024.0 / 1024.0 << " MB" << endl;
   cout << "Bits per edge : " << bs / static_cast<double>(dbg.num_edges()) << " Bits" << endl;
+  extension = (p.function == "build") ? "dbg" : "updated";
+  string base = (p.function == "build") ? p.pack_filename : p.graph_filename;
+  string outfilename = base+ "."+extension;
 
-  string outfilename = p.input_filename+ "."+extension;
-  cout<<"Writing the updated DynamicBOSS in file: "<<outfilename<<endl;
+  cout<<"Writing the";
+  if (p.function != "build") cout<<" updated";
+  cout<<" DynamicBOSS in file: "<<outfilename<<endl;
+
   ofstream ofs( outfilename, ios::out | ios::binary );
   dbg.serialize( ofs );
   ofs.close();
 }
+if (warning)
+  cout<<"There were no kmers to process (above WARNING), so graph is unchanged\n";
+
 if (p.function == "query")
   cout<<"Writing the querying results in file: "<<p.queryfile<<endl;
 

@@ -1,4 +1,4 @@
-CosmoAddVerify="../cosmo-add-verify"
+CosmoAddVerify="../bin/cosmo-add-verify"
 k=31
 
 
