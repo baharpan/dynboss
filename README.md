@@ -15,8 +15,10 @@ cd dynboss
 
 #compile DSK
 cd dsk-1.6906
+
 #for Max kmer size 32:
 make dsk canon=0
+
 #for larger kmer size like 64:
 make dsk k=64 canon=0
 
@@ -27,7 +29,7 @@ make revcomps=0
 ```
 ## Input
 Input is fasta file. No `N` characters are allowed in the fasta file.  
-## kmer counting and packing the edges
+## kmer counting and creating .packed file
 ```
 dsk-1.6906/dsk <.fasta file> <k value>
 bin/cosmo-pack <.solid_kmers_binary file>
@@ -50,6 +52,7 @@ bin/dynamicBOSS   query   -g <graph file> -s <kmer file>
 `<graph file>` must have extensions `.dbg` or `.updated`.
 
 `<kmer file>` must be fasta file with extensions `.fasta` or `.fa`
+
 ## Compelete Example
 ```
 cd test
