@@ -39,11 +39,16 @@ bin/dynamicBOSS   add     -g <graph file> -s <kmer file>
 bin/dynamicBOSS   delete  -g <graph file> -s <kmer file>
 bin/dynamicBOSS   query   -g <graph file> -s <kmer file>
 ```
-`build` builds the graph (`.dbg` file)
+`build` builds the graph (`.dbg` file).
+
 `add` counts the distinct kmers in the`<kmer file>`, adds them to the `<graph file>` and writes the updated graph with extesion `.updated`.
+
 `delete` counts the distinct kmers in the`<kmer file>`, deletes them from the `<graph file>` and writes the updated graph with extesion `.updated`.
+
 `query` counts the distinct kmers in the`<kmer file>`, query them in the `<graph file>` and writes the results in file queryResults.tsv.
+
 `<graph file>` must have extensions `.dbg` or `.updated`.
+
 `<kmer file>` must be fasta file with extensions `.fasta` or `.fa`
 ## Compelete Example
 ```
@@ -57,13 +62,16 @@ cd test
 #build the DynamicBOSS called "yeast_1.solid_kmers_binary.packed.dbg"
 ../bin/dynamicBOSS  build  -p   yeast_1.solid_kmers_binary.packed
 
-#add the distinct kmers in fasta file "yeast_2.fasta" to graph "yeast_1.solid_kmers_binary.packed.dbg" and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
+#add the distinct kmers in fasta file "yeast_2.fasta" to graph "yeast_1.solid_kmers_binary.packed.dbg" 
+and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
 ../bin/dynamicBOSS  add    -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 
-#delete the distinct kmers in fasta file "yeast_2.fasta" from graph "yeast_1.solid_kmers_binary.packed.dbg" and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
+#delete the distinct kmers in fasta file "yeast_2.fasta" from graph "yeast_1.solid_kmers_binary.packed.dbg" 
+and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
 ../bin/dynamicBOSS  delete -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 
-#query the distinct kmers in fasta file "yeast_2.fasta" in graph "yeast_1.solid_kmers_binary.packed.dbg" and write the results in queryResults.tsv
+#query the distinct kmers in fasta file "yeast_2.fasta" in graph "yeast_1.solid_kmers_binary.packed.dbg" 
+and write the results in queryResults.tsv
 ../bin/dynamicBOSS  query  -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 ```
 
