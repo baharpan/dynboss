@@ -1,5 +1,5 @@
 # DynamicBOSS
-Succinct Dynamic de Bruijn Graph
+A succinct and fully dynamic de Bruijn Graph that supports both addition and deletion of kmers, and can be constructed on very large samples.
 
 ## Dependencies
 - SDSL -- [Succinct Data Structure Library](https://github.com/simongog/sdsl-lite)
@@ -59,24 +59,30 @@ bin/dynamicBOSS   query   -g <graph file> -s <kmer file>
 ```
 cd test
 #count kmers with k=31, and output ".solid_kmers_binary" file
+
 ../dsk-/1.6906/dsk  yeast_1.fasta 31
 
 #create file "yeast_1.solid_kmers_binary.packed" needed for building DynamicBOSS
+
 ../bin/cosmo-pack   yeast_1.solid_kmers_binary
 
 #build the DynamicBOSS called "yeast_1.solid_kmers_binary.packed.dbg"
+
 ../bin/dynamicBOSS  build  -p   yeast_1.solid_kmers_binary.packed
 
 #add the distinct kmers in fasta file "yeast_2.fasta" to graph "yeast_1.solid_kmers_binary.packed.dbg" 
 and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
+
 ../bin/dynamicBOSS  add    -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 
 #delete the distinct kmers in fasta file "yeast_2.fasta" from graph "yeast_1.solid_kmers_binary.packed.dbg" 
 and writes the resulting graph "yeast_1.solid_kmers_binary.packed.dbg.updated"
+
 ../bin/dynamicBOSS  delete -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 
 #query the distinct kmers in fasta file "yeast_2.fasta" in graph "yeast_1.solid_kmers_binary.packed.dbg" 
 and write the results in queryResults.tsv
+
 ../bin/dynamicBOSS  query  -g   yeast_1.solid_kmers_binary.packed.dbg -s yeast_2.fasta
 ```
 
