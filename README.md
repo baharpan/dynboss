@@ -59,15 +59,12 @@ bin/dynamicBOSS   query   -g <graph file> -s <kmer file>
 ```
 cd test
 #count kmers with k=31, and output ".solid_kmers_binary" file
-
 ../dsk-/1.6906/dsk  yeast_1.fasta 31
 
 #create file "yeast_1.solid_kmers_binary.packed" needed for building DynamicBOSS
-
 ../bin/cosmo-pack   yeast_1.solid_kmers_binary
 
 #build the DynamicBOSS called "yeast_1.solid_kmers_binary.packed.dbg"
-
 ../bin/dynamicBOSS  build  -p   yeast_1.solid_kmers_binary.packed
 
 #add the distinct kmers in fasta file "yeast_2.fasta" to graph "yeast_1.solid_kmers_binary.packed.dbg" 
