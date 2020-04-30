@@ -34,7 +34,7 @@ Input is fasta file. No `N` characters are allowed in the fasta file.
 dsk-1.6906/dsk <.fasta file> <k value>
 bin/cosmo-pack <.solid_kmers_binary file>
 ```
-## DynamicBOSS Interface
+## DynamicBOSS Commands
 ```
 bin/dynamicBOSS   build   -p <.packed file>
 bin/dynamicBOSS   add     -g <graph file> -s <kmer file>
