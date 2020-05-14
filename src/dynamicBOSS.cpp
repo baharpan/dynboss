@@ -173,7 +173,7 @@ int main(int argc, char* argv[]){
     }
     cerr<<"\n100% of kmers were processed\n";
     if (available_kmers > 0){
-      cout<<available_kmers<<" ("<<available_kmers*100/kmers.size()<<"%) of the kmers were already in the graph\n";
+      cout<<available_kmers<<" ("<<(double)available_kmers*100/kmers.size()<<"%) of the kmers were already in the graph\n";
       if (available_kmers == kmers.size()){
         warning = 1;
         cout<<"WARNING! all kmers were already in the graph!\n";
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]){
     }
     cerr<<"\n100% of kmers were processed\n";
     if (absent_kmers > 0){
-      cout<<absent_kmers<<" ("<<absent_kmers*100/kmers.size()<<"%) of the kmers were not in the graph\n";
+      cout<<absent_kmers<<" ("<<(double)absent_kmers*100/kmers.size()<<"%) of the kmers were not in the graph\n";
       if (absent_kmers == kmers.size()){
         warning = 1;
         cout<<"WARNING! none of the kmers were in the graph!\n";
@@ -234,7 +234,7 @@ if (p.function == "query"){
       counter+=1;
   }
   cerr<<"\n100% of kmers were processed\n";
-  cout<<kmers.size()-absent_kmers<<" ("<<(kmers.size()-absent_kmers)*100/kmers.size()<<"%) of the kmers were in the graph\n";
+  cout<<kmers.size()-absent_kmers<<" ("<<(double)(kmers.size()-absent_kmers)*100/kmers.size()<<"%) of the kmers were in the graph\n";
   cout<<kmers.size()<< " kmers were queried in "<< time_elapsed/CLOCKS_PER_SEC<<" (s)"<<endl;
   cout<<"Time per operaition: "<<(time_elapsed/CLOCKS_PER_SEC)/kmers.size()<<" (s)"<<endl;
   ofs.close();
