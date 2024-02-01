@@ -60,7 +60,7 @@ BINFile=../bin/
 default: all
 
 lut.hpp: make_lut.py
-		python make_lut.py > lut.hpp
+		python3 make_lut.py > lut.hpp
 
 io.o: io.hpp io.cpp debug.h dummies.hpp kmer.hpp
 		$(CXX) $(CPP_FLAGS) -c io.cpp $(DEP_FLAGS)
