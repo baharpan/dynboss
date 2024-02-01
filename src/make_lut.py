@@ -26,5 +26,6 @@ all_bytes = np.array(range(256), np.uint8)
 rev_bytes = reverse_8(all_bytes)
 rev_comps = complement(rev_bytes)
 
-print src % (",\n ".join(map(hex, rev_bytes.tolist())),
-             ",\n  ".join(map(hex,rev_comps.tolist())))
+print(src % (",\n ".join(map(hex, rev_bytes.tolist())),
+             ",\n  ".join(map(hex,rev_comps.tolist()))))
+
